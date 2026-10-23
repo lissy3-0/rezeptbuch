@@ -286,6 +286,11 @@ main a{color:var(--accent)}
 .rate button[aria-pressed="false"]{color:var(--line)}
 .card-s{color:var(--accent);font-size:12px;letter-spacing:1px}
 
+/* Seitenansicht */
+.pv-scale.paged{box-shadow:none}
+.pv-page{position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(80,20,40,.10),0 12px 32px -6px rgba(120,40,70,.22)}
+.pv-pno{position:absolute;right:10px;bottom:8px;font:600 11px/1 var(--f-body);color:#a08890;background:rgba(255,255,255,.8);padding:3px 7px;border-radius:999px}
+
 /* Meldungen */
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
 #toast.err{background:var(--danger);color:var(--surface)}
@@ -464,8 +469,8 @@ main a{color:var(--accent)}
 <div id="toast" hidden></div>
 <div id="pdfHost" aria-hidden="true"></div>
 <div id="printHost" aria-hidden="true"></div>
-<input type="file" id="impIn" accept="application/json,.json" hidden>
-<input type="file" id="fileIn" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+<input type="file" id="impIn" hidden>
+<input type="file" id="fileIn" accept="image/*,application/pdf,.pdf" multiple hidden>
 <input type="file" id="photoIn" accept="image/png,image/jpeg,image/webp" hidden>
 <input type="file" id="tplImgIn" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" hidden>
 
@@ -482,6 +487,7 @@ const PAPER={
 };
 const STYLES={blush:'Blush',bogen:'Bogen',pastell:'Pastell',modern:'Modern',klassisch:'Klassisch',karte:'Karteikarte'};
 const PLAYFUL=['blush','bogen','pastell'];
+const FIT_MODES={pages:'Weitere Seite',cols:'Zweite Spalte',shrink:'Kleiner auf 1 Seite'};
 const TITLE_FONTS={'':'Wie Stil',script:'Schreibschrift',serif:'Serif kursiv',sans:'Modern',slab:'Slab',hand:'Handschrift'};
 const PAPERS=['','#FFF9F2','#FFF3F5','#F2F8F3','#F6F2FB','#F9F5EC','#F1F6FA'];
 const BASE_SECTIONS=[
@@ -541,7 +547,7 @@ function normTpl(t){
     accent:/^#[0-9a-f]{6}$/i.test(t.accent||'')?t.accent:'#D46A8C',fontScale:+t.fontScale||1,showCategory:t.showCategory!==false,showTags:t.showTags!==false,
     customFields:Array.isArray(t.customFields)?t.customFields.filter(f=>f&&f.key).map(f=>({key:f.key,label:f.label||f.key,hint:f.hint||'',inMeta:!!f.inMeta})):[],
     sections:Array.isArray(t.sections)?t.sections.filter(s=>s&&s.key).map(s=>({key:s.key,label:s.label||'',on:s.on!==false,col:s.col==='a'?'a':'b'})):[],
-    createdAt:t.createdAt||0,_virtual:!!t._virtual,titleFont:TITLE_FONTS[t.titleFont]?t.titleFont:'',paperColor:/^#[0-9a-f]{6}$/i.test(t.paperColor||'')?t.paperColor:''};
+    createdAt:t.createdAt||0,_virtual:!!t._virtual,titleFont:TITLE_FONTS[t.titleFont]?t.titleFont:'',fit:FIT_MODES[t.fit]?t.fit:'pages',paperColor:/^#[0-9a-f]{6}$/i.test(t.paperColor||'')?t.paperColor:''};
   const keys=new Set(o.sections.map(s=>s.key));
   for(const b of BASE_SECTIONS)if(!keys.has(b.key)){if(b.key==='rating'){const mi=o.sections.findIndex(x=>x.key==='meta');o.sections.splice(mi>=0?mi+1:o.sections.length,0,{key:'rating',label:b.label,on:true,col:'a'});}else o.sections.push({key:b.key,label:b.label,on:false,col:b.col});}
   for(const f of o.customFields)if(!keys.has('x:'+f.key))o.sections.push({key:'x:'+f.key,label:f.label,on:true,col:'a'});
@@ -614,19 +620,56 @@ function renderSheet(r,t){
   const head=`<header class="sh-head">${t.style==='pastell'?'<div class="tape"></div>':''}${t.showCategory&&r.category?`<span class="sh-cat">${esc(r.category)}</span>`:''}<h1 class="sh-title">${esc(r.title||'Ohne Titel')}</h1>${t.showTags&&(r.tags||[]).length?`<div class="sh-tags">${r.tags.map(x=>`<span class="tag">${esc(x)}</span>`).join('<span class="tsep"> · </span>')}</div>`:''}</header>`;
   return `<div class="sheet st-${t.style} ${t.columns===2?'two':'one'} p-${t.paper}${t.titleFont?' tf-'+t.titleFont:''}" data-paper="${t.paper}" style="${t.paperColor?'background:'+t.paperColor+';':''}--pw:${P.w}px;--ph:${P.h}px;--pad:${P.pad}px;--base:${P.base}px;--fs:${t.fontScale};--acc:${t.accent};--acc-soft:${soften(t.accent,.8)};--acc-pale:${soften(t.accent,.93)};--acc-deep:${darken(t.accent)}">${t.style==='karte'?'<div class="rand"></div>':''}${head}${body}</div>`;
 }
-function previewHtml(r,t){return `<div class="preview"><div class="pv-frame"><div class="pv-scale">${renderSheet(r,t)}</div></div></div>`;}
+function previewHtml(r,t){const alt=t.fit==='cols'&&t.columns===1?`<template class="pv-alt">${renderSheet(r,{...t,columns:2})}</template>`:'';return `<div class="preview"><div class="pv-frame" data-fit="${t.fit||'pages'}" data-fs="${t.fontScale}">${alt}<div class="pv-scale">${renderSheet(r,t)}</div></div></div>`;}
+const ATOMS='.sh-head,.ing,.ing-g,.step,.mi,.sh-h,.notes-line,.sh-intro,.sh-text,.nut,.sh-photo,.stars,.sh-src,.sh-meta';
+function pageSegments(sheet,P){
+  const H=sheet.scrollHeight;const m=Math.round(P.pad*.75);
+  if(H<=P.h+2)return [[0,H]];
+  const top0=sheet.getBoundingClientRect().top;const sc=sheet.getBoundingClientRect().height/sheet.offsetHeight||1;
+  const boxes=$$(ATOMS,sheet).map(e=>{const r=e.getBoundingClientRect();return [(r.top-top0)/sc,(r.bottom-top0)/sc];}).filter(b=>b[1]>b[0]);
+  const cands=[...new Set(boxes.map(b=>Math.ceil(b[1])+2))].sort((x,y)=>x-y);
+  const ok=y=>!boxes.some(b=>b[0]<y-1&&b[1]>y+1);
+  const segs=[];let start=0,first=true;
+  while(start<H-4){
+    const room=first?P.h-m:P.h-2*m;
+    if(H-start<=(first?P.h:P.h-m)){segs.push([start,H]);break;}
+    let end=0;for(const c of cands){if(c<=start+room*0.3)continue;if(c>start+room)break;if(ok(c))end=c;}
+    if(!end)end=start+room;
+    segs.push([start,end]);
+    const nxt=boxes.filter(b=>b[0]>=end-1).reduce((mn,b)=>Math.min(mn,b[0]),Infinity);
+    start=isFinite(nxt)&&nxt-end<m?Math.max(end,Math.floor(nxt)-4):end;first=false;
+  }
+  return segs;
+}
+function fitSheet(sheet,P,mode,fs,altHtml,holder){
+  if(sheet.scrollHeight<=P.h+2||mode==='pages')return sheet;
+  if(mode==='cols'&&altHtml){const tmp=document.createElement('div');tmp.innerHTML=altHtml;const alt=tmp.firstElementChild;holder.replaceChild(alt,sheet);sheet=alt;if(sheet.scrollHeight<=P.h+2)return sheet;}
+  if(mode==='shrink'||mode==='cols'){for(let f=0.95;f>=0.72;f-=0.04){sheet.style.setProperty('--fs',String(fs*f));if(sheet.scrollHeight<=P.h+2)break;}}
+  return sheet;
+}
+function sheetBg(sheet){const c=getComputedStyle(sheet).backgroundColor;return c&&c!=='rgba(0, 0, 0, 0)'?c:'#fff';}
 function mountPreviews(){
   $$('.pv-frame').forEach(fr=>{
-    const sheet=$('.sheet',fr);if(!sheet)return;
+    const sc=$('.pv-scale',fr);if(!sc)return;
+    if(!fr._src){const sh=$('.sheet',sc);if(!sh)return;fr._src=sh.outerHTML;}
+    sc.style.transform='none';
+    sc.innerHTML=fr._src;let sheet=$('.sheet',sc);
+    const P=PAPER[sheet.dataset.paper]||PAPER.A4;
+    const altT=$('template.pv-alt',fr);
+    sheet=fitSheet(sheet,P,fr.dataset.fit||'pages',+fr.dataset.fs||1,altT?altT.innerHTML:'',sc);
+    const segs=pageSegments(sheet,P);
     const box=fr.parentElement;const cs=getComputedStyle(box);
     const avail=box.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
-    const w=sheet.offsetWidth,h=sheet.offsetHeight,s=Math.min(1,avail/w);
-    $('.pv-scale',fr).style.transform=`scale(${s})`;fr.style.width=(w*s)+'px';fr.style.height=(h*s)+'px';
-    $$('.pb',sheet).forEach(e=>e.remove());
-    const P=PAPER[sheet.dataset.paper]||PAPER.A4;const m=P.pad*.75;
-    let y=P.h-m,k=2;if(h<=P.h+4)y=Infinity;
-    while(y<h-24){const d=document.createElement('div');d.className='pb';d.style.top=y+'px';d.innerHTML=`<span>≈ Seite ${k}</span>`;sheet.appendChild(d);y+=P.h-2*m;k++;}
+    const w=P.w,s=Math.min(1,avail/w),gap=18/s;
+    if(segs.length>1){
+      const bg=sheetBg(sheet);const html=sheet.outerHTML;const m=Math.round(P.pad*.75);
+      sc.innerHTML=segs.map(([a,b],k)=>`<div class="pv-page" style="width:${P.w}px;height:${P.h}px;background:${bg};${k?`margin-top:${gap}px;`:''}"><div style="position:absolute;left:0;right:0;top:${k?m:0}px;height:${b-a}px;overflow:hidden"><div style="position:absolute;left:0;top:${-a}px">${html}</div></div><span class="pv-pno">Seite ${k+1} von ${segs.length}</span></div>`).join('');
+      sc.classList.add('paged');
+    }else sc.classList.remove('paged');
+    const h=segs.length>1?segs.length*P.h+(segs.length-1)*gap:sheet.offsetHeight;
+    sc.style.transform=`scale(${s})`;fr.style.width=(w*s)+'px';fr.style.height=(h*s)+'px';
   });
+  hydrate();
 }
 let rsT;addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(mountPreviews,120);});
 if(document.fonts)document.fonts.ready.then(()=>mountPreviews());
@@ -777,7 +820,7 @@ function viewUpload(){
   <div style="margin-bottom:18px"><h1 class="h1">Neues Rezept einlesen</h1><p class="muted" style="margin:4px 0 0">Screenshot hinzufügen, die App liest die Daten heraus und trägt sie in die gewählte Vorlage ein. Vor dem Speichern kannst du alles prüfen.</p></div>
   <div class="up"><div style="min-width:0">
     <h2 class="steps-h h2"><b>1</b>Screenshots</h2>
-    <label class="drop" id="drop" for="fileIn"><p class="h2">Screenshots hierher ziehen</p><p class="muted" style="margin:0">oder klicken zum Auswählen · Einfügen mit Strg+V geht auch</p><p class="muted" style="margin:6px 0 0;font-size:13px">PNG, JPG, WebP · mehrere Bilder ergeben ein Rezept, in der angezeigten Reihenfolge</p></label>
+    <label class="drop" id="drop" for="fileIn"><p class="h2">Screenshots hierher ziehen</p><p class="muted" style="margin:0">oder klicken zum Auswählen · Einfügen mit Strg+V geht auch</p><p class="muted" style="margin:6px 0 0;font-size:13px">Screenshots, Fotos oder PDF · bei PDFs wird jede Seite ein Bild</p></label>
     <div class="files">${U.files.map((x,i)=>`<figure class="fi" style="margin:0"><span class="num">${i+1}</span><img src="${esc(x.url)}" alt="Screenshot ${i+1}"><div class="ctl"><button class="ib" data-act="f-left" data-i="${i}" ${i?'':'disabled'} aria-label="Nach vorne">←</button><button class="ib" data-act="zoom" data-src="${esc(x.url)}" aria-label="Vergrößern">⤢</button><button class="ib" data-act="f-del" data-i="${i}" aria-label="Entfernen">✕</button><button class="ib" data-act="f-right" data-i="${i}" ${i<U.files.length-1?'':'disabled'} aria-label="Nach hinten">→</button></div></figure>`).join('')}</div>
     <details style="margin-top:14px" ${U.text?'open':''}><summary style="cursor:pointer;font-weight:600">Stattdessen oder zusätzlich Text einfügen</summary><textarea class="inp" id="u-text" rows="5" style="margin-top:8px" placeholder="Rezepttext hier einfügen …">${esc(U.text)}</textarea></details>
     ${S.batch?batchHtml():''}
@@ -830,6 +873,7 @@ function viewTemplates(){
         <div class="field"><span>Aufteilung</span>${seg('columns',[[1,'Eine Spalte'],[2,'Zwei Spalten']],t.columns)}</div>
         <div class="field"><span>Papier</span>${seg('paper',Object.entries(PAPER).map(([k,p])=>[k,p.label]),t.paper)}</div>
         <div class="field"><span>Schriftgröße</span>${seg('fontScale',[[0.9,'Klein'],[1,'Normal'],[1.1,'Groß']],[0.9,1,1.1].reduce((a,b)=>Math.abs(b-t.fontScale)<Math.abs(a-t.fontScale)?b:a))}</div>
+        <div class="field"><span>Lange Rezepte</span>${seg('fit',Object.entries(FIT_MODES),t.fit||'pages')}<small>Was passiert, wenn ein Rezept nicht auf eine Seite passt.</small></div>
         <div class="field"><span>Titelschrift</span>${seg('titleFont',Object.entries(TITLE_FONTS),t.titleFont||'')}</div>
         <div class="field"><span>Papierfarbe</span><div class="swatches">${PAPERS.map(c=>`<button class="sw" style="background:${c||'#FFFFFF'}" data-act="tpl-set" data-k="paperColor" data-v="${c}" aria-pressed="${(t.paperColor||'').toLowerCase()===c.toLowerCase()}" aria-label="${c?'Papier '+c:'Weiß'}"></button>`).join('')}</div></div>
         <div class="field"><span>Akzentfarbe</span><div class="swatches">${SWATCHES.map(c=>`<button class="sw" style="background:${c}" data-act="tpl-set" data-k="accent" data-v="${c}" aria-pressed="${c.toLowerCase()===t.accent.toLowerCase()}" aria-label="Farbe ${c}"></button>`).join('')}<input type="color" id="tplColor" value="${esc(t.accent)}" aria-label="Eigene Farbe" style="width:34px;height:30px;border:0;background:none;padding:0;cursor:pointer"></div></div>
@@ -922,7 +966,8 @@ ${t.customFields.length?`- extra: ${t.customFields.map(f=>`"${f.key}" = ${f.labe
 Regeln:
 - Übernimm Mengen, Temperaturen, Zeiten und Schritte genau. Erfinde nichts. Fehlende Angaben bleiben leer ("" bzw. []).
 - ${U.translate?'Ist das Rezept in einer anderen Sprache, übersetze alle Texte ins Deutsche. Rechne amerikanische Maße in metrische um und lass das Original in Klammern stehen, z. B. "240 ml (1 cup) Milch"; °F in °C.':'Behalte die Sprache des Originals bei.'}
-- Ignoriere Werbung, Kommentare, Bewertungen, Navigationsleisten und Bedienelemente.`;
+- Ignoriere Werbung, Kommentare, Bewertungen, Navigationsleisten und Bedienelemente.
+- Ist auf den Bildern gar kein Rezept zu sehen (z. B. Deckblatt, Kapitelseite, leere Vorlage), antworte nur mit {"kein_rezept":true}.`;
 }
 function sampleErr(e){
   const c=e&&e.code;
@@ -962,9 +1007,9 @@ async function runExtract(){
   try{tiles=await makeTiles(U.files.map(f=>f.url));}catch(e){S.extract={running:false,msg:'Ein Bild konnte nicht gelesen werden. Verwende PNG, JPG oder WebP.'};render();return;}
   const max=(imgLimits&&imgLimits.maxCount)||20;
   if(tiles.length>max){tiles=tiles.slice(0,max);warn=`Die Screenshots waren sehr lang, es wurden nur die ersten ${max} Abschnitte gelesen. Bitte das Ende prüfen.`;}
-  extractCtl=new AbortController();
+  extractCtl=new AbortController();S.aiNow='';S.exT0=Date.now();
   setExMsg(aiName()+' liest das Rezept …');
-  {const t0=Date.now();const iv=setInterval(()=>{if(!S.extract||!S.extract.running){clearInterval(iv);return;}setExMsg(`${aiName()} liest das Rezept … ${Math.round((Date.now()-t0)/1000)} s`+(Date.now()-t0>30000?' (bricht spätestens nach 2 Minuten ab)':''));},1000);}
+  {const t0=Date.now();const iv=setInterval(()=>{if(!S.extract||!S.extract.running){clearInterval(iv);return;}setExMsg(`${S.aiNow&&AI.provider==='gemini'?S.aiNow:aiName()} liest das Rezept … ${Math.round((Date.now()-t0)/1000)} s`+(Date.now()-t0>30000?' (bricht spätestens nach 2 Minuten ab)':''));},1000);}
   try{
     const opts={signal:extractCtl.signal,modelTier:'default',onText:({text})=>setExMsg(`${aiName()} schreibt das Rezept ab … ${text.length} Zeichen`)};
     if(tiles.length)opts.images=tiles.map(x=>x.blob);
@@ -974,7 +1019,7 @@ async function runExtract(){
     rec._new=true;rec._files=U.files.slice();rec._warn=warn;rec._text=U.text;
     if(!rec.ingredients.length&&!rec.steps.length)rec._warn=(warn?warn+' ':'')+'Es wurden weder Zutaten noch Schritte gefunden. Ist auf dem Screenshot ein Rezept zu sehen?';
     S.draft=rec;S.extract=null;S.upload.files=[];S.upload.text='';
-    go('editor');
+    go('editor');toast(`Ausgelesen in ${Math.round((Date.now()-S.exT0)/1000)} s${S.aiNow&&AI.provider==='gemini'?' mit '+S.aiNow:''}.`);
   }catch(e){
     if(e&&e.code==='cancelled'){S.extract=null;render();return;}
     S.extract={running:false,msg:sampleErr(e)};render();
@@ -1067,6 +1112,13 @@ function paginate(canvas,P){
   }
   return out;
 }
+function sliceCanvas(canvas,P,segs,bg){
+  const k=canvas.width/P.w,pageH=Math.round(P.h*k),m=Math.round(P.pad*.75*k);const out=[];
+  segs.forEach(([a,b],i)=>{const sy=Math.round(a*k),sh=Math.min(canvas.height-sy,Math.round((b-a)*k));const top=i?m:0;
+    const pc=document.createElement('canvas');pc.width=canvas.width;pc.height=pageH;const x=pc.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,pc.width,pageH);
+    if(sh>0)x.drawImage(canvas,0,sy,canvas.width,sh,0,top,canvas.width,sh);out.push(pc.toDataURL('image/jpeg',.9));});
+  return out;
+}
 const safeName=s=>String(s||'Rezept').replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,' ').trim().slice(0,80)||'Rezept';
 async function buildPages(list){
   if(!window.html2canvas)throw {code:'nolib'};
@@ -1076,9 +1128,11 @@ async function buildPages(list){
     for(let i=0;i<list.length;i++){
       toast(list.length>1?`Seiten werden vorbereitet … ${i+1} von ${list.length}`:'Seiten werden vorbereitet …','',true);
       const r=list[i],t=tplById(r.templateId),P=PAPER[t.paper]||PAPER.A4;
-      host.innerHTML=renderSheet(r,t);const el=host.firstElementChild;await hydrate(el);await waitImgs(el);
+      host.innerHTML=renderSheet(r,t);let el=host.firstElementChild;await hydrate(el);await waitImgs(el);
+      el=fitSheet(el,P,t.fit||'pages',t.fontScale,t.fit==='cols'&&t.columns===1?renderSheet(r,{...t,columns:2}):'',host);await hydrate(el);await waitImgs(el);
+      const segs=pageSegments(el,P);const bg=sheetBg(el);
       const canvas=await html2canvas(el,{scale:2,backgroundColor:null,logging:false,useCORS:true});
-      for(const img of paginate(canvas,P))pages.push({img,P});
+      for(const img of sliceCanvas(canvas,P,segs,bg))pages.push({img,P});
     }
   }finally{host.innerHTML='';}
   return pages;
@@ -1126,7 +1180,7 @@ function showFileSheet(filename,blob,title){
 const downloads={save:async({filename,data})=>{showFileSheet(filename,data instanceof Blob?data:new Blob([data]),'Datei ist fertig');return {status:'saved'};}};
 
 /* ---------- Vorlagen speichern ---------- */
-function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,titleFont:n.titleFont,paperColor:n.paperColor,createdAt:n.createdAt||Date.now()};}
+function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,fit:n.fit,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,titleFont:n.titleFont,paperColor:n.paperColor,createdAt:n.createdAt||Date.now()};}
 async function saveTpl(silent){
   clearTimeout(S.tplSaveT);S.tplSaveT=null;
   const t=S.tplDraft;if(!t||!db)return;const ver=S.tplVer||0;const wasNew=!!t._unsaved;
@@ -1156,11 +1210,34 @@ async function saveSettings(patch){
 }
 
 /* ---------- Dateien hinzufügen ---------- */
-function addFiles(list){
-  const ok=['image/png','image/jpeg','image/webp','image/gif'];let bad=0;
-  for(const f of list){if(!ok.includes(f.type)){bad++;continue;}S.upload.files.push({file:f,url:URL.createObjectURL(f)});}
-  if(bad)toast(`${bad} Datei(en) übersprungen. Erlaubt sind PNG, JPG, WebP und GIF (iPhone-Fotos im HEIC-Format bitte als Screenshot oder JPG).`,'err');
-  if(S.view!=='upload')S.view='upload';
+async function pdfPages(file){
+  await loadScript(PDFJS+'pdf.min.js');const lib=window.pdfjsLib;if(!lib)throw new Error('pdf');
+  try{lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';}catch(_){}
+  const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;const out=[];
+  for(let i=1;i<=Math.min(doc.numPages,60);i++){
+    const page=await doc.getPage(i);const v1=page.getViewport({scale:1});const vp=page.getViewport({scale:Math.min(3,1600/Math.max(v1.width,v1.height))});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:x,viewport:vp}).promise;out.push(await canvasBlob(c,'image/jpeg',.88));
+  }
+  return out;
+}
+async function toJpegFile(f){const u=URL.createObjectURL(f);try{const img=await loadImg(u);const k=Math.min(1,2000/img.naturalWidth);const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);const b=await canvasBlob(c,'image/jpeg',.9);return new File([b],(f.name||'Bild').replace(/\.\w+$/,'')+'.jpg',{type:'image/jpeg'});}finally{URL.revokeObjectURL(u);}}
+async function addFiles(list){
+  const ok=['image/png','image/jpeg','image/webp','image/gif'];let bad=0,pdfPagesN=0;
+  if(S.view!=='upload'){S.view='upload';render();}
+  for(const f of list){
+    if(ok.includes(f.type)){S.upload.files.push({file:f,url:URL.createObjectURL(f)});continue;}
+    if(f.type==='application/pdf'||/\.pdf$/i.test(f.name||'')){
+      toast('PDF wird geöffnet …','',true);
+      try{const blobs=await pdfPages(f);const base=(f.name||'PDF').replace(/\.pdf$/i,'');blobs.forEach((b,i)=>{const file=new File([b],`${base}-Seite-${i+1}.jpg`,{type:'image/jpeg'});S.upload.files.push({file,url:URL.createObjectURL(file)});});pdfPagesN+=blobs.length;hideToast();}
+      catch(e){hideToast();bad++;}
+      continue;}
+    if(/^image\//.test(f.type)||/\.(heic|heif)$/i.test(f.name||'')){try{const j=await toJpegFile(f);S.upload.files.push({file:j,url:URL.createObjectURL(j)});}catch(_){bad++;}continue;}
+    bad++;
+  }
+  if(pdfPagesN>1)S.upload.multi=true;
+  if(bad)toast(`${bad} Datei(en) konnten nicht geöffnet werden. Erlaubt sind Bilder (PNG, JPG, WebP, HEIC) und PDFs.`,'err');
+  else if(pdfPagesN)toast(`${pdfPagesN} PDF-Seite(n) hinzugefügt.`);
   S.extract=S.extract&&S.extract.running?S.extract:null;render();
 }
 
@@ -1514,7 +1591,7 @@ async function askPersist(force){try{if(!navigator.storage||!navigator.storage.p
 /* ---------- KI über eigenen Schlüssel (Gemini kostenlos oder Claude) ---------- */
 const AI={provider:'gemini',ckey:'',cmodel:'',gkey:'',gmodel:'',gchosen:false,key:'',model:'',models:[]};
 const FALLBACK_MODEL='claude-sonnet-4-5';
-const FALLBACK_GEMINI='gemini-flash-latest';
+const FALLBACK_GEMINI='gemini-2.5-flash';
 function aiName(){return AI.provider==='claude'?'Claude':'Gemini';}
 function syncAiActive(){if(AI.provider==='claude'){AI.key=AI.ckey;AI.model=AI.cmodel;}else{AI.key=AI.gkey;AI.model=AI.gmodel;}}
 function loadAiStored(v){v=v||{};if(v.key&&!v.ckey){v.ckey=v.key;v.cmodel=v.model;}AI.ckey=v.ckey||'';AI.cmodel=v.cmodel||'';AI.gkey=v.gkey||'';AI.gchosen=!!v.gchosen;AI.gmodel=AI.gchosen?(v.gmodel||''):(v.gmodel?FALLBACK_GEMINI:'');AI.provider=v.provider||(AI.ckey&&!AI.gkey?'claude':'gemini');syncAiActive();}
@@ -1569,13 +1646,14 @@ function geminiErr(status,msg){
 }
 function geminiCandidates(){
   const ids=(AI.models||[]).map(m=>m.id);
-  const pref=[AI.gmodel||FALLBACK_GEMINI,'gemini-2.5-flash','gemini-flash-lite-latest','gemini-2.5-flash-lite','gemini-flash-latest'];
+  const pref=[AI.gchosen&&AI.gmodel?AI.gmodel:FALLBACK_GEMINI,'gemini-2.5-flash','gemini-2.5-flash-lite','gemini-flash-lite-latest','gemini-flash-latest'];
   const out=[];for(const id of pref)if(id&&!out.includes(id)&&(!ids.length||ids.includes(id)||id===AI.gmodel))out.push(id);
   return out.slice(0,4);
 }
+function modelLabel(id){const m=(AI.models||[]).find(x=>x.id===id);return m?m.name:id;}
 async function geminiOnce(model,parts,gc,signal){
   const ctl=new AbortController();let timedOut=false;
-  const tm=setTimeout(()=>{timedOut=true;ctl.abort();},75000);
+  const tm=setTimeout(()=>{timedOut=true;ctl.abort();},45000);S.aiNow=modelLabel(model);
   const onAbort=()=>ctl.abort();
   if(signal){if(signal.aborted)ctl.abort();else signal.addEventListener('abort',onAbort,{once:true});}
   const thinking=/2\.5/.test(model)?{thinkingBudget:/pro/.test(model)?128:0}:{thinkingLevel:'low'};
@@ -1940,7 +2018,7 @@ function viewSettings(){
       <label class="field"><span>${AI.provider==='gemini'?'Gemini-Schlüssel':'Claude-Schlüssel'}</span><div class="row" style="flex-wrap:nowrap"><input class="inp" id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="${AI.provider==='gemini'?'AQ.… oder AIza…':'sk-ant-…'}" value="${esc(AI.key)}"><button class="btn sm ghost" data-act="key-show" aria-label="Schlüssel anzeigen">Zeigen</button></div></label>
       <div class="row"><button class="btn primary" data-act="key-save" ${st.busy?'disabled':''}>${st.busy?esc(st.step||'Wird geprüft …'):'Speichern & prüfen'}</button>${AI.key?'<button class="btn ghost danger" data-act="key-del">Entfernen</button>':''}</div>
       ${st.ok?`<p class="okline" style="margin:0">${st.note?esc(st.note):'Schlüssel funktioniert.'}</p>`:st.err?`<p class="errline" style="margin:0">${esc(st.err)}</p>`:''}
-      ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>${AI.provider==='gemini'?'Empfohlen: „Gemini Flash Latest“. Falls das Auslesen lange dauert, probier „Gemini 2.5 Flash“ oder ein „Flash-Lite“-Modell, die sind am schnellsten.':'Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.'}</small></label>`:''}
+      ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>${AI.provider==='gemini'?'Empfohlen: „Gemini 2.5 Flash“ (schnell und zuverlässig). „Flash-Lite“ ist noch schneller, liest Handschrift aber ungenauer. Neuere Modelle sind im kostenlosen Kontingent oft überlastet.':'Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.'}</small></label>`:''}
       <p class="muted" style="margin:0;font-size:12.5px">Der Schlüssel wird nur auf diesem Gerät gespeichert. Trag ihn auf jedem Gerät ein, auf dem du Screenshots auslesen willst.</p>
     </section>
     ${completeBoxHtml()}
@@ -2083,10 +2161,10 @@ async function fillFieldsForTemplate(){
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function batchHtml(){
   const B=S.batch;const done=B.items.filter(x=>x.status==='ok').length,err=B.items.filter(x=>x.status==='err').length;
-  const ic={wait:'○',run:'<span class="spin" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></span>',ok:'✓',err:'✕'};
+  const ic={skip:'–',wait:'○',run:'<span class="spin" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></span>',ok:'✓',err:'✕'};
   return `<div class="panel" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
     <div class="row"><b>${B.running?`Rezepte werden eingelesen … ${done+err} von ${B.items.length}`:`Fertig: ${done} gespeichert${err?`, ${err} mit Fehler`:''}`}</b><span class="spacer"></span>${B.running?'<button class="btn sm" data-act="batch-stop">Stoppen</button>':'<button class="btn sm primary" data-act="nav" data-view="library">Zu den Rezepten</button><button class="btn sm ghost" data-act="batch-close">Schließen</button>'}</div>
-    ${B.items.map(it=>`<div class="row" style="flex-wrap:nowrap;gap:10px"><img src="${esc(it.url)}" alt="" style="width:40px;height:52px;object-fit:cover;object-position:top;border-radius:6px;flex:none"><span style="width:18px;text-align:center;color:${it.status==='err'?'var(--danger)':it.status==='ok'?'var(--good)':'var(--muted)'}">${ic[it.status]}</span><span style="min-width:0;overflow-wrap:anywhere;font-size:14px">${it.status==='ok'?`<button class="linkbtn" data-act="open" data-id="${esc(it.id)}">${esc(it.title)}</button>`:it.status==='err'?`<span class="errline" style="font-size:13px">${esc(it.msg)}</span>`:it.status==='run'?'wird gelesen …':'wartet'}</span></div>`).join('')}
+    ${B.items.map(it=>`<div class="row" style="flex-wrap:nowrap;gap:10px"><img src="${esc(it.url)}" alt="" style="width:40px;height:52px;object-fit:cover;object-position:top;border-radius:6px;flex:none"><span style="width:18px;text-align:center;color:${it.status==='err'?'var(--danger)':it.status==='ok'?'var(--good)':'var(--muted)'}">${ic[it.status]}</span><span style="min-width:0;overflow-wrap:anywhere;font-size:14px">${it.status==='ok'?`<button class="linkbtn" data-act="open" data-id="${esc(it.id)}">${esc(it.title)}</button>`:it.status==='err'?`<span class="errline" style="font-size:13px">${esc(it.msg)}</span>`:it.status==='run'?'wird gelesen …':it.status==='skip'?'<span class="muted">Kein Rezept erkannt, übersprungen</span>':'wartet'}</span></div>`).join('')}
     ${B.stopped?'<p class="muted" style="margin:0;font-size:13px">Gestoppt. Die restlichen Bilder wurden nicht eingelesen.</p>':''}
   </div>`;
 }
@@ -2103,7 +2181,7 @@ async function extractOne(it,t,U,useAI){
     try{out=await sample.json(buildPrompt(t,imgs.length,{...U,text:''}),{images:imgs.map(x=>x.blob)});}
     catch(e){if(e&&e.code==='rate_limited'&&a===0){it.msg='Limit erreicht, warte kurz …';if(S.view==='upload')render();await sleep(20000);continue;}throw e;}
   }
-  const rec=normalize(out,t,U);
+  const rec=normalize(out,t,U);if(out&&out.kein_rezept||(!rec.ingredients.length&&!rec.steps.length&&(!out||!str(out.title))))rec._none=true;
   if(out&&out.photo&&imgs[+out.photo.image]){try{const b=await cropPhoto(imgs[+out.photo.image].canvas,out.photo.box);if(b)rec._photoBlob=b;}catch(_){}}
   return rec;
 }
@@ -2120,14 +2198,19 @@ async function runBatch(forceOcr){
   S.batch={items:U.files.map(f=>({url:f.url,file:f.file,status:'wait',title:'',msg:'',id:''})),running:true,stop:false};
   S.upload.files=[];S.upload.multi=false;render();
   const B=S.batch;
-  for(const it of B.items){
-    if(B.stop){B.stopped=true;break;}
-    it.status='run';if(S.view==='upload')render();
-    try{const rec=await extractOne(it,t,U,useAI);it.id=await saveDirect(rec,it.file);it.title=rec.title||'Neues Rezept';it.status='ok';it.msg='';}
-    catch(e){it.status='err';it.msg=e&&e.code?sampleErr(e):'Das Bild konnte nicht gelesen werden.';}
-    if(S.view==='upload')render();
-    if(useAI)await sleep(1500);
-  }
+  const queue=B.items.slice();
+  const worker=async()=>{
+    while(queue.length){
+      if(B.stop){B.stopped=true;return;}
+      const it=queue.shift();
+      it.status='run';if(S.view==='upload')render();
+      try{const rec=await extractOne(it,t,U,useAI);if(rec._none){it.status='skip';it.msg='';}else{it.id=await saveDirect(rec,it.file);it.title=rec.title||'Neues Rezept';it.status='ok';it.msg='';}}
+      catch(e){it.status='err';it.msg=e&&e.code?sampleErr(e):'Das Bild konnte nicht gelesen werden.';}
+      if(S.view==='upload')render();
+      if(useAI)await sleep(500);
+    }
+  };
+  await Promise.all(Array.from({length:useAI?3:1},worker));
   B.running=false;if(B.stop)B.stopped=true;render();
   toast(`${B.items.filter(x=>x.status==='ok').length} Rezept(e) eingelesen.`);
 }

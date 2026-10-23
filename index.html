@@ -547,6 +547,16 @@ function cats(){return S.settings.categories;}
 function matchCat(c){const L=cats();const f=L.find(x=>x.toLowerCase()===String(c||'').trim().toLowerCase());return f||(L.includes(OLD2NEW[String(c||'').trim()])?OLD2NEW[String(c||'').trim()]:L.includes('Extras')?'Extras':L.includes('Sonstiges')?'Sonstiges':L[0]);}
 
 /* ---------- Rezeptblatt ---------- */
+const OVEN_KEYS=['temperatur','ofeneinstellung','ofen-einstellung','ofen','backtemperatur'];
+function normMode(m){m=String(m||'').trim();if(!m)return '';if(/ober/i.test(m)&&/unter/i.test(m))return 'Ober-/Unterhitze';if(/umluft|hei(ß|ss)luft/i.test(m))return 'Umluft';if(/grill/i.test(m))return 'Grill';return m.charAt(0).toUpperCase()+m.slice(1);}
+function deriveOven(r){
+  const txt=[...(r.steps||[]),r.tips||'',r.intro||''].join(' ');
+  const tm=txt.match(/(\d{2,3}(?:\s*[–-]\s*\d{2,3})?)\s*(?:°\s*(C|F)?|Grad(?:\s*Celsius)?)(?![a-zäöü])/i);
+  const mm=txt.match(/Ober-?\s*(?:und|\/|&)?\s*Unterhitze|Ober-?\/?\s*Unterhitze|Umluft|Hei(?:ß|ss)luft|Grillfunktion|Oberhitze|Unterhitze/i);
+  return {temp:tm?tm[1].replace(/\s+/g,'')+' °'+(tm[2]||'C').toUpperCase():'',mode:mm?normMode(mm[0]):''};
+}
+function ovenInfo(r){const ex=r.extra||{};const d=(!r.temperature||!r.ovenMode)?deriveOven(r):{temp:'',mode:''};
+  return {temp:str(r.temperature)||str(ex.temperatur||ex.backtemperatur)||d.temp,mode:normMode(str(r.ovenMode)||str(ex.ofeneinstellung||ex['ofen-einstellung']||ex.ofen))||d.mode};}
 function photoSrc(r){return r._photoUrl||(r.photoId?(IMG.get(r.photoId)||''):'');}
 function hasPhoto(r){return !!(r._photoUrl||r.photoId);}
 function bgAttr(r){const u=photoSrc(r);return u?`style="background-image:url('${esc(u)}')"`:(r.photoId?`data-bg="${esc(r.photoId)}"`:'');}
@@ -563,8 +573,8 @@ function sectionHtml(s,r,t){
   if(k==='photo')return hasPhoto(r)?`<div class="sh-sec"><div class="sh-photo" ${bgAttr(r)}></div></div>`:'';
   if(k==='intro')return r.intro?`<div class="sh-sec"><p class="sh-intro">${nl2br(r.intro)}</p></div>`:'';
   if(k==='meta'){
-    const it=[['Portionen',r.servings,'servings'],['Vorbereitung',r.prepTime,'clock'],['Koch-/Backzeit',r.cookTime,'pot'],['Gesamtzeit',r.totalTime,'clock'],['Schwierigkeit',r.difficulty,'heart']]
-      .concat(((t&&t.customFields)||[]).filter(f=>f.inMeta&&t.sections.some(x=>x.key==='x:'+f.key&&x.on)).map(f=>[(t.sections.find(x=>x.key==='x:'+f.key)||{}).label||f.label,r.extra&&r.extra[f.key],/temp|grad|°/i.test(f.label)?'temp':/ofen|herd|hitze|umluft/i.test(f.label)?'oven':'star']))
+    const it=[['Portionen',r.servings,'servings'],['Vorbereitung',r.prepTime,'clock'],['Koch-/Backzeit',r.cookTime,'pot'],['Gesamtzeit',r.totalTime,'clock'],['Temperatur',ovenInfo(r).temp,'temp'],['Ofen',ovenInfo(r).mode,'oven'],['Schwierigkeit',r.difficulty,'heart']]
+      .concat(((t&&t.customFields)||[]).filter(f=>!OVEN_KEYS.includes(f.key)&&f.inMeta&&t.sections.some(x=>x.key==='x:'+f.key&&x.on)).map(f=>[(t.sections.find(x=>x.key==='x:'+f.key)||{}).label||f.label,r.extra&&r.extra[f.key],/temp|grad|°/i.test(f.label)?'temp':/ofen|herd|hitze|umluft/i.test(f.label)?'oven':'star']))
       .filter(x=>str(x[1]));
     const ic=t&&PLAYFUL.includes(t.style);const col=t?darken(t.accent):'#555';
     return it.length?`<div class="sh-sec"><div class="sh-meta">${it.map(([l,v,k])=>`<div class="mi">${ic?icon(k,col):''}<span class="ml">${l}</span><span class="mv">${esc(v)}</span></div>`).join('')}</div></div>`:'';
@@ -575,7 +585,7 @@ function sectionHtml(s,r,t){
   if(k==='tips')return str(r.tips)?`<div class="sh-sec sh-tipbox">${H}<div class="sh-text">${nl2br(r.tips)}</div></div>`:'';
   if(k==='notes')return `<div class="sh-sec">${H}${'<div class="notes-line"></div>'.repeat(5)}</div>`;
   if(k==='source')return str(r.source)?`<div class="sh-sec sh-src">${esc(s.label)}: ${esc(r.source)}</div>`:'';
-  if(k.startsWith('x:')){const cf=t&&(t.customFields||[]).find(f=>f.key===k.slice(2));if(cf&&cf.inMeta)return '';const v=str(r.extra&&r.extra[k.slice(2)]);return v?`<div class="sh-sec">${H}<div class="sh-text">${nl2br(v)}</div></div>`:'';}
+  if(k.startsWith('x:')){if(OVEN_KEYS.includes(k.slice(2)))return '';const cf=t&&(t.customFields||[]).find(f=>f.key===k.slice(2));if(cf&&cf.inMeta)return '';const v=str(r.extra&&r.extra[k.slice(2)]);return v?`<div class="sh-sec">${H}<div class="sh-text">${nl2br(v)}</div></div>`:'';}
   return '';
 }
 function renderSheet(r,t){
@@ -627,7 +637,7 @@ function render(){
   mountPreviews();hydrate();
   if(S.view==='pantry'&&S.pantry.focus){S.pantry.focus=false;const i=$('#pin');if(i)i.focus();}
 }
-function go(view,extra={}){Object.assign(S,{confirm:null},extra);S.view=view;render();scrollTo({top:0});}
+function go(view,extra={}){flushTplSave();Object.assign(S,{confirm:null},extra);S.view=view;render();scrollTo({top:0});}
 
 /* Bibliothek */
 function sortRecipes(L){
@@ -718,6 +728,7 @@ function viewEditor(){
         ${f('intro','Beschreibung',d.intro,{area:true,rows:2})}
         <div class="grid2">${f('servings','Portionen',d.servings,{ph:'z. B. 4 Portionen'})}${f('difficulty','Schwierigkeit',d.difficulty,{ph:'leicht / mittel / schwer'})}</div>
         <div class="grid2">${f('prepTime','Vorbereitung',d.prepTime,{ph:'15 Min.'})}${f('cookTime','Koch-/Backzeit',d.cookTime,{ph:'30 Min.'})}${f('totalTime','Gesamtzeit',d.totalTime,{ph:'45 Min.'})}</div>
+        <div class="grid2">${f('temperature','Temperatur',d.temperature||'',{ph:deriveOven(d).temp||'z. B. 180 °C'})}${f('ovenMode','Ofeneinstellung',d.ovenMode||'',{ph:deriveOven(d).mode||'Ober-/Unterhitze, Umluft …'})}</div>
         <div class="field"><span>Foto</span><div class="photo-ed"><div class="ph" ${bgAttr(d)}>${hasPhoto(d)?'':'Kein Foto'}</div>
           <div class="row"><label class="btn sm" for="photoIn">${hasPhoto(d)?'Foto ersetzen':'Foto hinzufügen'}</label>${hasPhoto(d)?'<button class="btn sm danger" data-act="photo-del">Entfernen</button>':''}</div></div></div>
       </fieldset>
@@ -771,7 +782,7 @@ function viewUpload(){
 /* Vorlagen & Kategorien */
 function viewTemplates(){
   const L=allTemplates();
-  if(!S.tplDraft||!L.some(t=>t.id===S.tplDraft.id)&&!S.tplDraft._unsaved){const t=tplById(S.tplEditId);S.tplDraft=clone(t);S.tplEditId=t.id;S.tplDirty=false;}
+  if(!S.tplDraft||!L.some(t=>t.id===S.tplDraft.id)&&!S.tplDraft._unsaved){const t=tplById(S.tplEditId);S.tplDraft=clone(t);S.tplOrig=clone(t);S.tplEditId=t.id;S.tplDirty=false;}
   const t=S.tplDraft;
   const counts=new Map();for(const r of S.recipes)counts.set(r.category,(counts.get(r.category)||0)+1);
   const usage=S.recipes.filter(r=>tplById(r.templateId).id===t.id).length;
@@ -818,8 +829,8 @@ function viewTemplates(){
         </div>
       </div>
       <div class="row">
-        <button class="btn primary" data-act="tpl-save" ${canWrite?'':'disabled'}>${S.tplDirty||t._virtual||t._unsaved?'Vorlage speichern':'Gespeichert'}</button>
-        ${S.tplDirty?'<button class="btn" data-act="tpl-reset">Änderungen verwerfen</button>':''}
+        <button class="btn primary" data-act="tpl-save" ${canWrite?'':'disabled'}>${S.tplDirty?'Wird gespeichert …':'Gespeichert ✓'}</button>
+        <button class="btn" data-act="tpl-reset" ${tplHasChanges()?'':'hidden'}>Änderungen rückgängig</button>
         <span class="spacer"></span>
         ${!t._unsaved&&t.id!==defaultTplId()?`<button class="btn ghost" data-act="tpl-default" ${canWrite?'':'disabled'}>Als Standard</button>`:''}
         ${!t._unsaved?`<button class="btn ghost" data-act="tpl-dup" ${canWrite?'':'disabled'}>Duplizieren</button>`:''}
@@ -833,11 +844,11 @@ function viewTemplates(){
         <p class="muted" style="margin:0;font-size:12.5px">Umbenennen gilt auch für die Rezepte darin. Kategorien mit Rezepten lassen sich nicht löschen.</p>
       </div>
     </div>
-    <div class="tprev" style="min-width:0">${S.tplRef&&S.tplDraft&&S.tplRef.id===S.tplDraft.id?`<div class="refimg"><button data-act="zoom" data-src="${esc(S.tplRef.url)}"><img src="${esc(S.tplRef.url)}" alt="Vorbild"></button><span>Vorbild. Passe Farben, Schrift und Bereiche links an, bis es dir gefällt, dann „Vorlage speichern“.</span></div>`:''}<div class="pv-label"><span>Vorschau mit</span><select class="inp" id="tplPreviewSel" style="width:auto;padding:5px 8px">${pvOpts}</select>${pvRec===DEMO?'<span>(Beispiel)</span>':''}<span class="spacer"></span><span>${usage} Rezept(e) nutzen diese Vorlage</span></div><div id="tplPreview">${previewHtml(withPlaceholders(pvRec,normTpl(t)),normTpl(t))}</div></div>
+    <div class="tprev" style="min-width:0">${S.tplRef&&S.tplDraft&&S.tplRef.id===S.tplDraft.id?`<div class="refimg"><button data-act="zoom" data-src="${esc(S.tplRef.url)}"><img src="${esc(S.tplRef.url)}" alt="Vorbild"></button><span>Vorbild. Passe Farben, Schrift und Bereiche links an, bis es dir gefällt. Alles wird automatisch gespeichert.</span></div>`:''}<div class="pv-label"><span>Vorschau mit</span><select class="inp" id="tplPreviewSel" style="width:auto;padding:5px 8px">${pvOpts}</select>${pvRec===DEMO?'<span>(Beispiel)</span>':''}<span class="spacer"></span><span>${usage} Rezept(e) nutzen diese Vorlage</span></div><div id="tplPreview">${previewHtml(withPlaceholders(pvRec,normTpl(t)),normTpl(t))}</div></div>
   </div>`;
 }
 function refreshTplPreview(){const box=$('#tplPreview');if(!box)return;const pv=S.recipes.find(r=>r.id===S.tplPreviewId)||S.recipes[0]||DEMO;const nt=normTpl(S.tplDraft);box.innerHTML=previewHtml(withPlaceholders(pv,nt),nt);mountPreviews();}
-function tplChanged(full){S.tplDirty=true;if(full){render();}else{refreshTplPreview();const b=$('[data-act="tpl-save"]');if(b)b.textContent='Vorlage speichern';}}
+function tplChanged(full){S.tplDirty=true;S.tplVer=(S.tplVer||0)+1;clearTimeout(S.tplSaveT);S.tplSaveT=setTimeout(()=>saveTpl(true),900);if(full){const y=scrollY;render();scrollTo({top:y});}else{refreshTplPreview();}updateTplSaveUi();}
 
 /* ---------- Auslesen mit Claude ---------- */
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Bild konnte nicht geladen werden'));i.src=src;});}
@@ -870,7 +881,7 @@ ${n?`Du bekommst ${n} Bild(er). Sie gehören zu EINEM Rezept, in Lesereihenfolge
 ${U.text.trim()?`Zusätzlicher Text vom Nutzer:\n"""\n${U.text.trim().slice(0,20000)}\n"""`:''}
 
 Antworte NUR mit einem JSON-Objekt (ohne Kommentare) in genau dieser Form:
-{"title":"","category":"","intro":"","servings":"","prepTime":"","cookTime":"","totalTime":"","difficulty":"","ingredients":[],"steps":[],"tips":"","nutrition":{"kcal":"","protein":"","carbs":"","fat":""},"source":"","tags":[],"extra":${JSON.stringify(ex)},"photo":null}
+{"title":"","category":"","intro":"","servings":"","prepTime":"","cookTime":"","totalTime":"","temperature":"","ovenMode":"","difficulty":"","ingredients":[],"steps":[],"tips":"","nutrition":{"kcal":"","protein":"","carbs":"","fat":""},"source":"","tags":[],"extra":${JSON.stringify(ex)},"photo":null}
 
 Bedeutung der Felder:
 - title: Name des Gerichts.
@@ -878,6 +889,8 @@ Bedeutung der Felder:
 - intro: 1–2 Sätze Beschreibung, nur wenn das Original eine hat.
 - servings: z. B. "4 Portionen" oder "1 Kastenform (26 cm)".
 - prepTime / cookTime / totalTime: z. B. "15 Min." oder "1 Std. 10 Min."; nur angegebene Werte, totalTime darfst du aus den anderen addieren.
+- temperature: Ofen-/Backtemperatur, z. B. "180 °C", nur wenn das Rezept einen Ofen nutzt (sonst "").
+- ovenMode: Ofeneinstellung, z. B. "Ober-/Unterhitze" oder "Umluft", nur wenn angegeben oder eindeutig (sonst "").
 - difficulty: nur wenn angegeben (leicht / mittel / schwer).
 - ingredients: eine Zutat pro Eintrag, Menge und Einheit zuerst, z. B. "200 g Mehl", "1 Prise Salz", "Salz und Pfeffer". Gibt es Zwischenüberschriften (z. B. "Für den Teig"), setze sie als eigenen Eintrag mit Doppelpunkt am Ende: "Für den Teig:".
 - steps: ein Arbeitsschritt pro Eintrag, ohne Nummerierung, vollständige Sätze.
@@ -916,7 +929,7 @@ function normalize(o,t,U){
   const arr=v=>Array.isArray(v)?v.map(x=>str(typeof x==='object'&&x?Object.values(x).join(' '):x)).filter(Boolean):str(v)?str(v).split('\n').map(s=>s.trim()).filter(Boolean):[];
   const n=o.nutrition||{};const ex={};const oe=o.extra&&typeof o.extra==='object'?o.extra:{};
   for(const f of t.customFields)ex[f.key]=str(oe[f.key]);
-  return ensureRecipe({title:str(o.title)||'Neues Rezept',category:U.cat==='auto'?matchCat(o.category):U.cat,intro:str(o.intro),servings:str(o.servings),prepTime:str(o.prepTime),cookTime:str(o.cookTime),totalTime:str(o.totalTime),difficulty:str(o.difficulty),
+  return ensureRecipe({title:str(o.title)||'Neues Rezept',category:U.cat==='auto'?matchCat(o.category):U.cat,intro:str(o.intro),servings:str(o.servings),prepTime:str(o.prepTime),cookTime:str(o.cookTime),totalTime:str(o.totalTime),temperature:str(o.temperature),ovenMode:normMode(str(o.ovenMode)),difficulty:str(o.difficulty),
     ingredients:arr(o.ingredients),steps:arr(o.steps).map(s=>s.replace(/^\s*\d+[.)]\s*/,'')),tips:str(o.tips),nutrition:{kcal:str(n.kcal),protein:str(n.protein),carbs:str(n.carbs),fat:str(n.fat)},
     source:str(o.source),tags:arr(o.tags).slice(0,6),extra:ex,templateId:t.id});
 }
@@ -1096,19 +1109,29 @@ const downloads={save:async({filename,data})=>{showFileSheet(filename,data insta
 
 /* ---------- Vorlagen speichern ---------- */
 function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,titleFont:n.titleFont,paperColor:n.paperColor,createdAt:n.createdAt||Date.now()};}
-async function saveTpl(){
-  const t=S.tplDraft;
+async function saveTpl(silent){
+  clearTimeout(S.tplSaveT);S.tplSaveT=null;
+  const t=S.tplDraft;if(!t||!db)return;const ver=S.tplVer||0;const wasNew=!!t._unsaved;
   try{
-    if(!S.templates.length){ // Standardvorlagen beim ersten Speichern übernehmen
-      for(const p of PRESETS)if(p.id!==t.id)await db.collection('templates').doc(p.id).set(tplBody({...p,createdAt:Date.now()-(10-PRESETS.indexOf(p))}));
-    }
+    if(!S.templates.length){for(const p of PRESETS)if(p.id!==t.id)await db.collection('templates').doc(p.id).set(tplBody({...p,createdAt:Date.now()-(10-PRESETS.indexOf(p))}));}
     const id=t.id;const body=tplBody(t);
     await db.collection('templates').doc(id).set(body);
-    S.tplDraft=normTpl({...body,id});S.tplEditId=id;S.tplDirty=false;
+    S.tplEditId=id;delete t._unsaved;t._virtual=false;
+    if((S.tplVer||0)===ver)S.tplDirty=false;
     if(!S.templates.some(x=>x.id===id))S.templates.push({...body,id});
-    toast('Vorlage gespeichert.');render();
+    if(!silent){toast('Vorlage gespeichert.');render();}
+    else if(wasNew&&S.view==='templates'){const y=scrollY;render();scrollTo({top:y});}
+    else updateTplSaveUi();
   }catch(e){toast('Vorlage konnte nicht gespeichert werden.','err');}
 }
+function updateTplSaveUi(){
+  const b=$('[data-act="tpl-save"]');if(b)b.textContent=S.tplDirty?'Wird gespeichert …':'Gespeichert ✓';
+  const u=$('[data-act="tpl-reset"]');if(u)u.hidden=!tplHasChanges();
+}
+function tplHasChanges(){try{return !!(S.tplOrig&&S.tplDraft&&S.tplOrig.id===S.tplDraft.id&&JSON.stringify(tplBody(S.tplOrig))!==JSON.stringify(tplBody(S.tplDraft)));}catch(_){return false;}}
+function flushTplSave(){if(S.tplSaveT){saveTpl(true);}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushTplSave();});
+addEventListener('pagehide',flushTplSave);
 async function saveSettings(patch){
   Object.assign(S.settings,patch);
   try{await db.doc('settings/app').set({categories:S.settings.categories,defaultTemplateId:S.settings.defaultTemplateId||null,catsV2:true});}catch(e){toast('Einstellung konnte nicht gespeichert werden.','err');}
@@ -1251,10 +1274,11 @@ async function pantryIdea(){
 ${P.staples?'Salz, Pfeffer, Öl und Wasser sind vorhanden. ':''}Nimm möglichst wenige zusätzliche Zutaten dazu und nenne diese in "tips" als Einkaufshinweis. Nicht jede genannte Zutat muss vorkommen, wenn sie nicht passt.
 Schreib auf Deutsch, mit metrischen Mengen.
 Antworte NUR mit einem JSON-Objekt in dieser Form:
-{"title":"","category":"","intro":"","servings":"","prepTime":"","cookTime":"","totalTime":"","difficulty":"","ingredients":[],"steps":[],"tips":"","nutrition":{"kcal":"","protein":"","carbs":"","fat":""},"tags":[],"extra":${JSON.stringify(ex)}}
+{"title":"","category":"","intro":"","servings":"","prepTime":"","cookTime":"","totalTime":"","temperature":"","ovenMode":"","difficulty":"","ingredients":[],"steps":[],"tips":"","nutrition":{"kcal":"","protein":"","carbs":"","fat":""},"tags":[],"extra":${JSON.stringify(ex)}}
 - category: genau einer dieser Werte: ${cats().join(', ')}
 - ingredients: eine Zutat pro Eintrag, Menge zuerst, z. B. "200 g Spinat"; Zwischenüberschriften als eigener Eintrag mit Doppelpunkt.
 - steps: ein Arbeitsschritt pro Eintrag, ohne Nummer.
+- temperature / ovenMode: Backtemperatur (z. B. "180 °C") und Ofeneinstellung (z. B. "Umluft"), nur wenn der Ofen gebraucht wird.
 - nutrition: grobe Schätzung pro Portion oder leer lassen.
 ${t.customFields.length?'- extra: '+t.customFields.map(f=>`"${f.key}" = ${f.label}${f.hint?' ('+f.hint+')':''}`).join('; '):''}`;
   try{
@@ -1324,7 +1348,7 @@ document.addEventListener('click',async ev=>{
     case 'p-ai-off': S.pantry.ai=null;render();break;
     case 'p-idea': await pantryIdea();break;
     /* Vorlagen */
-    case 'tpl-pick': {const t=tplById(b.dataset.id);S.tplDraft=clone(t);S.tplEditId=t.id;S.tplDirty=false;S.confirm=null;render();break;}
+    case 'tpl-pick': {flushTplSave();const t=tplById(b.dataset.id);S.tplDraft=clone(t);S.tplOrig=clone(t);S.tplEditId=t.id;S.tplDirty=false;S.confirm=null;render();break;}
     case 'tpl-set': {const k=b.dataset.k;let v=b.dataset.v;if(k==='columns')v=+v;if(k==='fontScale')v=+v;S.tplDraft[k]=v;tplChanged(true);break;}
     case 'sec-up': case 'sec-down': {const L=S.tplDraft.sections,j=a==='sec-up'?i-1:i+1;if(L[j]){[L[i],L[j]]=[L[j],L[i]];tplChanged(true);}break;}
     case 'fill-run': await fillFieldsForTemplate();break;
@@ -1333,8 +1357,8 @@ document.addEventListener('click',async ev=>{
       T.customFields.push({key,label,hint:$('#cf-hint').value.trim()});{const si=T.sections.findIndex(x=>x.key==='source'||x.key==='notes');const ns={key:'x:'+key,label,on:true,col:'a'};if(si>=0)T.sections.splice(si,0,ns);else T.sections.push(ns);}tplChanged(true);break;}
     case 'cf-del': {const T=S.tplDraft;const s=T.sections[i];if(s&&s.key.startsWith('x:')){T.sections.splice(i,1);T.customFields=T.customFields.filter(f=>'x:'+f.key!==s.key);tplChanged(true);}break;}
     case 'tpl-save': await saveTpl();break;
-    case 'tpl-reset': {const t=tplById(S.tplEditId);S.tplDraft=clone(t);S.tplDirty=false;render();break;}
-    case 'tpl-new': case 'tpl-dup': {const base=a==='tpl-dup'?clone(S.tplDraft):clone(PRESETS[0]);base.id=newId();base.name=a==='tpl-dup'?base.name+' (Kopie)':'Neue Vorlage';base._unsaved=true;base._virtual=false;base.createdAt=Date.now();S.tplDraft=normTpl(base);S.tplDraft._unsaved=true;S.tplDirty=true;render();break;}
+    case 'tpl-reset': {if(!S.tplOrig)break;S.tplDraft=clone(S.tplOrig);S.tplDirty=true;await saveTpl(true);render();toast('Änderungen rückgängig gemacht.');break;}
+    case 'tpl-new': case 'tpl-dup': {const base=a==='tpl-dup'?clone(S.tplDraft):clone(PRESETS[0]);base.id=newId();base.name=a==='tpl-dup'?base.name+' (Kopie)':'Neue Vorlage';base._unsaved=true;base._virtual=false;base.createdAt=Date.now();S.tplDraft=normTpl(base);S.tplDraft._unsaved=true;S.tplOrig=null;S.tplDirty=true;S.tplVer=(S.tplVer||0)+1;clearTimeout(S.tplSaveT);S.tplSaveT=setTimeout(()=>saveTpl(true),300);render();break;}
     case 'tpl-default': await saveSettings({defaultTemplateId:S.tplDraft.id});if(!S.templates.length)await saveTpl();else render();toast('Neue Standardvorlage festgelegt.');break;
     case 'tpl-del-ask': S.confirm='tpl';render();break;
     case 'tpl-del': {const id=S.tplDraft.id;try{await db.collection('templates').doc(id).delete();S.templates=S.templates.filter(t=>t.id!==id);if(S.settings.defaultTemplateId===id)await saveSettings({defaultTemplateId:null});S.tplDraft=null;S.tplEditId=null;S.confirm=null;toast('Vorlage gelöscht.');render();}catch(e){toast('Löschen hat nicht geklappt.','err');}break;}
@@ -1518,17 +1542,17 @@ function geminiErr(status,msg){
   if(status===413)return {code:'prompt_too_large',message:msg};
   return {code:'upstream_error',message:msg};
 }
-async function geminiText(prompt,{images=[],signal,onText,maxTokens=16000,json=false}={}){
-  if(!AI.gkey)throw {code:'no_key'};
-  const parts=[];
-  for(const b of images){const type=['image/jpeg','image/png','image/webp'].includes(b.type)?b.type:'image/jpeg';parts.push({inline_data:{mime_type:type,data:await blobToB64(b)}});}
-  parts.push({text:prompt});
-  const model=(AI.gmodel||FALLBACK_GEMINI).replace(/^models\//,'');
-  const gc={maxOutputTokens:maxTokens,temperature:0.2};if(json)gc.responseMimeType='application/json';
+function geminiCandidates(){
+  const ids=(AI.models||[]).map(m=>m.id);
+  const pref=[AI.gmodel||FALLBACK_GEMINI,'gemini-2.5-flash','gemini-flash-lite-latest','gemini-2.5-flash-lite','gemini-flash-latest'];
+  const out=[];for(const id of pref)if(id&&!out.includes(id)&&(!ids.length||ids.includes(id)||id===AI.gmodel))out.push(id);
+  return out.slice(0,4);
+}
+async function geminiOnce(model,parts,gc,signal){
   const ctl=new AbortController();let timedOut=false;
-  const tm=setTimeout(()=>{timedOut=true;ctl.abort();},120000);
-  if(signal){if(signal.aborted)ctl.abort();else signal.addEventListener('abort',()=>ctl.abort(),{once:true});}
-  let j;
+  const tm=setTimeout(()=>{timedOut=true;ctl.abort();},75000);
+  const onAbort=()=>ctl.abort();
+  if(signal){if(signal.aborted)ctl.abort();else signal.addEventListener('abort',onAbort,{once:true});}
   const thinking=/2\.5/.test(model)?{thinkingBudget:/pro/.test(model)?128:0}:{thinkingLevel:'low'};
   const call=async(withThinking)=>{
     const cfg=withThinking?{...gc,thinkingConfig:thinking}:gc;
@@ -1538,10 +1562,25 @@ async function geminiText(prompt,{images=[],signal,onText,maxTokens=16000,json=f
       throw geminiErr(res.status,msg);}
     return res.json();
   };
-  try{
-    j=await call(true);
-  }catch(e){if(e&&e.code)throw e;if(e&&e.name==='AbortError')throw {code:timedOut?'timeout':'cancelled'};throw {code:'offline'};}
-  finally{clearTimeout(tm);}
+  try{return await call(true);}
+  catch(e){if(e&&e.code)throw e;if(e&&e.name==='AbortError')throw {code:timedOut?'timeout':'cancelled'};throw {code:'offline'};}
+  finally{clearTimeout(tm);if(signal)signal.removeEventListener('abort',onAbort);}
+}
+async function geminiText(prompt,{images=[],signal,onText,maxTokens=16000,json=false}={}){
+  if(!AI.gkey)throw {code:'no_key'};
+  const parts=[];
+  for(const b of images){const type=['image/jpeg','image/png','image/webp'].includes(b.type)?b.type:'image/jpeg';parts.push({inline_data:{mime_type:type,data:await blobToB64(b)}});}
+  parts.push({text:prompt});
+  const gc={maxOutputTokens:maxTokens,temperature:0.2};if(json)gc.responseMimeType='application/json';
+  const cands=geminiCandidates();let j=null,lastErr=null;
+  for(let i=0;i<cands.length;i++){
+    if(signal&&signal.aborted)throw {code:'cancelled'};
+    try{j=await geminiOnce(cands[i].replace(/^models\//,''),parts,gc,signal);break;}
+    catch(e){lastErr=e;
+      if(!e||!['overloaded','model','timeout'].includes(e.code)&&!(e.code==='rate_limited'&&/demand|overload/i.test(e.message||'')))throw e;
+      if(i<cands.length-1)await new Promise(r=>setTimeout(r,800));}
+  }
+  if(!j)throw lastErr||{code:'overloaded'};
   if(j.promptFeedback&&j.promptFeedback.blockReason)throw {code:'refused'};
   const c=j.candidates&&j.candidates[0];
   const text=((c&&c.content&&c.content.parts)||[]).filter(p=>p.text&&!p.thought).map(p=>p.text).join('');
@@ -1592,6 +1631,7 @@ async function saveKey(){
     catch(e){clearTimeout(tm);
       if(e&&(e.code==='cancelled'))S.aiStatus={ok:true,note:'Schlüssel gespeichert. Die Testanfrage hat sehr lange gedauert, probier einfach ein Rezept aus.'};
       else if(e&&e.code==='empty_completion')S.aiStatus={ok:true};
+      else if(e&&['overloaded','timeout','rate_limited'].includes(e.code))S.aiStatus={ok:true,note:'Schlüssel funktioniert. Gemini ist gerade stark ausgelastet. Die App weicht beim Auslesen automatisch auf ein anderes Modell aus.'};
       else S.aiStatus={err:detail(e)};}
   }else{S.aiStatus={ok:true};toast('Schlüssel gespeichert und geprüft.');}
   render();
@@ -1613,7 +1653,7 @@ function textToRecipe(text,t,U){
   const serv=(all.match(/\d+\s*(Portionen|Personen|Stück|Stk\.?)/i)||[])[0]||'';
   const time=(all.match(/\d+\s*(Min\.?|Minuten|Std\.?|Stunden)\b/i)||[])[0]||'';
   const title=(head.find(l=>l.length>3&&!/^[\d:.,%]/.test(l)&&!/[|@#]/.test(l)&&/[a-zäöü]/i.test(l))||'Neues Rezept').slice(0,90);
-  return ensureRecipe({title,category:U.cat==='auto'?matchCat('Extras'):U.cat,intro:'',servings:serv,prepTime:'',cookTime:'',totalTime:time,difficulty:'',ingredients:ig,steps:st,tips:tips.join('\n'),nutrition:{},source:'',tags:[],extra:{},templateId:t.id});
+  return ensureRecipe({title,category:U.cat==='auto'?matchCat('Extras'):U.cat,intro:'',servings:serv,prepTime:'',cookTime:'',totalTime:time,temperature:deriveOven({steps:[all]}).temp,ovenMode:deriveOven({steps:[all]}).mode,difficulty:'',ingredients:ig,steps:st,tips:tips.join('\n'),nutrition:{},source:'',tags:[],extra:{},templateId:t.id});
 }
 async function runOcr(){
   const U=S.upload;
@@ -1957,10 +1997,10 @@ Antworte NUR mit JSON in genau dieser Form:
     for(const x of Array.isArray(o.sections)?o.sections:[]){const b=BASE_SECTIONS.find(y=>y.key===x.key);if(!b||seen.has(b.key))continue;seen.add(b.key);t.sections.push({key:b.key,label:str(x.label)||b.label,on:x.on!==false,col:x.col==='a'?'a':'b'});}
     for(const f of Array.isArray(o.customFields)?o.customFields:[]){const label=str(f&&f.label);if(!label)continue;let key=slug(label),n=2;const k0=key;while(t.customFields.some(c=>c.key===key)||BASE_SECTIONS.some(y=>y.key===key))key=k0+'-'+(n++);
       t.customFields.push({key,label,hint:str(f.hint)});t.sections.push({key:'x:'+key,label,on:true,col:t.columns===2?'a':'b'});}
-    S.tplDraft=normTpl(t);S.tplDraft._unsaved=true;S.tplDirty=true;S.tplEditId=t.id;
+    S.tplDraft=normTpl(t);S.tplDraft._unsaved=true;S.tplOrig=null;S.tplDirty=true;S.tplEditId=t.id;S.tplVer=(S.tplVer||0)+1;clearTimeout(S.tplSaveT);S.tplSaveT=setTimeout(()=>saveTpl(true),300);
     if(S.tplRef&&S.tplRef.url)URL.revokeObjectURL(S.tplRef.url);
     S.tplRef={id:t.id,url:URL.createObjectURL(img.blob)};
-    S.tplImport={msg:'Fertig. Vergleiche rechts mit dem Vorbild und speichere die Vorlage.'};render();
+    S.tplImport={msg:'Fertig. Vergleiche rechts mit dem Vorbild. Änderungen werden automatisch gespeichert.'};render();
   }catch(e){S.tplImport={err:true,msg:sampleErr(e)};render();}
 }
 
@@ -1979,7 +2019,7 @@ function fillBoxHtml(t){
   if(J&&J.tplId===t.id&&J.running)return `<div class="note" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px"><span class="spin" style="width:14px;height:14px"></span><span>Felder werden ausgefüllt … ${J.done} von ${J.total}</span><span class="spacer"></span><button class="btn sm" data-act="fill-stop">Stoppen</button></div>`;
   if(J&&J.tplId===t.id&&J.msg)return `<p class="${J.err?'errline':'okline'}" style="margin:0;font-size:13.5px">${esc(J.msg)}</p>${list.length&&AI.key?`<button class="btn sm" data-act="fill-run">Erneut versuchen (${list.length})</button>`:''}`;
   if(!list.length)return '';
-  if(S.tplDirty)return `<p class="muted" style="margin:0;font-size:13px">Speichere die Vorlage, dann kannst du die neuen Felder bei deinen ${list.length} Rezept(en) ausfüllen lassen.</p>`;
+  if(S.tplDirty)return `<p class="muted" style="margin:0;font-size:13px">Einen Moment, die Vorlage wird gespeichert …</p>`;
   if(!AI.key)return `<p class="muted" style="margin:0;font-size:13px">${list.length} Rezept(e) haben noch leere Zusatzfelder. Mit einem KI-Schlüssel (unter „Mehr“) kann die App sie ausfüllen.</p>`;
   return `<button class="btn sm primary" data-act="fill-run" style="align-self:flex-start">Zusatzfelder bei ${list.length} Rezept(en) ausfüllen</button><small class="muted" style="font-size:12.5px">Die KI liest dafür Zutaten und Schritte der Rezepte. Leere Felder bleiben leer, wenn nichts passt.</small>`;
 }

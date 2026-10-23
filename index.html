@@ -631,7 +631,7 @@ function cardHtml(r){
 function libResults(){
   const L=sortRecipes(S.recipes.filter(matchesQ));
   if(!S.loaded)return `<p class="muted">Rezepte werden geladen …</p>`;
-  if(!S.recipes.length)return `<div class="empty"><p class="h2">Noch keine Rezepte in der Kartei</p><p class="muted">Lade einen Screenshot hoch, Claude liest Zutaten und Schritte heraus und trägt sie in deine Vorlage ein.</p><p style="margin-top:14px"><button class="btn primary" data-act="nav" data-view="upload">Erstes Rezept einlesen</button></p></div>`;
+  if(!S.recipes.length)return `<div class="empty"><p class="h2">Noch keine Rezepte in der Kartei</p><p class="muted">Lade einen Screenshot hoch, die App liest Zutaten und Schritte heraus und trägt sie in deine Vorlage ein.</p><p style="margin-top:14px"><button class="btn primary" data-act="nav" data-view="upload">Erstes Rezept einlesen</button></p></div>`;
   if(S.cat!=='alle'){
     const sub=L.filter(r=>r.category===S.cat);
     return sub.length?`<div class="cards">${sub.map(cardHtml).join('')}</div>`:`<div class="empty"><p class="h2">${S.q?'Keine Treffer':'Noch nichts in „'+esc(S.cat)+'“'}</p><p class="muted">${S.q?'Versuche einen anderen Suchbegriff.':'Neue Rezepte landen hier, sobald du sie dieser Kategorie zuordnest.'}</p></div>`;
@@ -712,7 +712,7 @@ function viewEditor(){
       </fieldset>
       ${cf.length?`<fieldset class="fs"><legend>Zusatzfelder der Vorlage „${esc(t.name)}“</legend>
         ${cf.map(x=>f('extra.'+x.key,esc(x.label),str(d.extra[x.key]),{area:true,rows:2,help:x.hint?esc(x.hint):''})).join('')}
-        ${AI.key?`<div class="row"><button class="btn sm" data-act="ai-extras" id="aiExtrasBtn">Leere Zusatzfelder von Claude ausfüllen lassen</button><span class="muted" id="aiExtrasMsg" style="font-size:13px"></span></div>`:''}
+        ${AI.key?`<div class="row"><button class="btn sm" data-act="ai-extras" id="aiExtrasBtn">Leere Zusatzfelder von der KI ausfüllen lassen</button><span class="muted" id="aiExtrasMsg" style="font-size:13px"></span></div>`:''}
       </fieldset>`:''}
       <fieldset class="fs"><legend>Weitere Angaben</legend>
         <div class="grid2">${f('nutrition.kcal','kcal',str(d.nutrition.kcal))}${f('nutrition.protein','Eiweiß',str(d.nutrition.protein))}${f('nutrition.carbs','Kohlenhydrate',str(d.nutrition.carbs))}${f('nutrition.fat','Fett',str(d.nutrition.fat))}</div>
@@ -731,7 +731,7 @@ function viewUpload(){
   const t=tplById(U.tplId);
   const busy=S.extract&&S.extract.running;
   return `${S.draft&&S.draft._new?`<div class="confirm" style="background:var(--accent-soft)"><b>Du hast ein ausgelesenes Rezept noch nicht gespeichert: „${esc(S.draft.title)}“</b><span class="spacer"></span><button class="btn" data-act="draft-resume">Weiter bearbeiten</button></div>`:''}
-  <div style="margin-bottom:18px"><h1 class="h1">Neues Rezept einlesen</h1><p class="muted" style="margin:4px 0 0">Screenshot hinzufügen, Claude liest die Daten heraus und trägt sie in die gewählte Vorlage ein. Vor dem Speichern kannst du alles prüfen.</p></div>
+  <div style="margin-bottom:18px"><h1 class="h1">Neues Rezept einlesen</h1><p class="muted" style="margin:4px 0 0">Screenshot hinzufügen, die App liest die Daten heraus und trägt sie in die gewählte Vorlage ein. Vor dem Speichern kannst du alles prüfen.</p></div>
   <div class="up"><div style="min-width:0">
     <h2 class="steps-h h2"><b>1</b>Screenshots</h2>
     <label class="drop" id="drop" for="fileIn"><p class="h2">Screenshots hierher ziehen</p><p class="muted" style="margin:0">oder klicken zum Auswählen · Einfügen mit Strg+V geht auch</p><p class="muted" style="margin:6px 0 0;font-size:13px">PNG, JPG, WebP · mehrere Bilder ergeben ein Rezept, in der angezeigten Reihenfolge</p></label>
@@ -745,9 +745,9 @@ function viewUpload(){
       <small>${esc(STYLES[t.style])} · ${t.columns===2?'zwei Spalten':'eine Spalte'} · ${PAPER[t.paper].label}${t.customFields.length?' · Zusatzfelder: '+t.customFields.map(x=>esc(x.label)).join(', '):''}</small></label>
     <label class="field"><span>Kategorie</span><select class="inp" id="u-cat"><option value="auto">Automatisch erkennen</option>${cats().map(c=>`<option ${U.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></label>
     <label class="row" style="gap:8px;font-size:14px"><input type="checkbox" id="u-translate" ${U.translate?'checked':''}> Fremdsprachige Rezepte ins Deutsche übersetzen</label>
-    ${AI.key?`<button class="btn primary" data-act="extract" ${busy?'disabled':''} style="justify-content:center;padding:11px">Mit Claude auslesen</button>
+    ${AI.key?`<button class="btn primary" data-act="extract" ${busy?'disabled':''} style="justify-content:center;padding:11px">Mit ${aiName()} auslesen</button>
     <button class="btn" data-act="ocr" ${busy?'disabled':''} style="justify-content:center">Ohne KI: nur Text erkennen</button>`:`<button class="btn primary" data-act="ocr" ${busy?'disabled':''} style="justify-content:center;padding:11px">Text erkennen (ohne KI)</button>
-    <p class="note" style="margin:0;font-size:13.5px">Ohne KI wird der Text erkannt und grob in Zutaten und Schritte sortiert, den Rest prüfst du selbst. Mit einem eigenen API-Schlüssel liest Claude alles sauber aus, übersetzt und schneidet das Foto zu. <button class="linkbtn" data-act="nav" data-view="settings">Schlüssel hinterlegen</button></p>`}
+    <p class="note" style="margin:0;font-size:13.5px">Ohne KI wird der Text erkannt und grob in Zutaten und Schritte sortiert, den Rest prüfst du selbst. Mit einem KI-Schlüssel (Gemini gibt es kostenlos) wird alles sauber ausgelesen, übersetzt und das Foto ausgeschnitten. <button class="linkbtn" data-act="nav" data-view="settings">Schlüssel hinterlegen</button></p>`}
     <button class="btn ghost" data-act="manual" ${canWrite?'':'disabled'} style="justify-content:center">Ohne Screenshot von Hand anlegen</button>
   </aside></div>`;
 }
@@ -770,7 +770,7 @@ function viewTemplates(){
       <input class="inp" data-tsec="label" data-i="${i}" value="${esc(s.label)}" title="${esc(isX?'Eigenes Feld':SEC_HELP[s.key]||'')}" aria-label="Überschrift">
       ${t.columns===2?`<select class="inp" data-tsec="col" data-i="${i}" aria-label="Spalte"><option value="a" ${s.col==='a'?'selected':''}>links</option><option value="b" ${s.col!=='a'?'selected':''}>rechts</option></select>`:'<span></span>'}
       <span class="mv"><button class="ib" data-act="sec-up" data-i="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button class="ib" data-act="sec-down" data-i="${i}" ${i<t.sections.length-1?'':'disabled'} aria-label="Nach unten">↓</button>${isX?`<button class="ib" data-act="cf-del" data-i="${i}" aria-label="Feld löschen">✕</button>`:''}</span>
-      ${isX?`<input class="inp hint" data-tcf="hint" data-key="${esc(cfx.key)}" value="${esc(cfx.hint)}" placeholder="Hinweis für Claude: was soll hier stehen?">`:''}</div>`;}).join('');
+      ${isX?`<input class="inp hint" data-tcf="hint" data-key="${esc(cfx.key)}" value="${esc(cfx.hint)}" placeholder="Hinweis für die KI: was soll hier stehen?">`:''}</div>`;}).join('');
   const catRows=cats().map((c,i)=>`<div class="catrow" style="--h:${hueOf(c)}"><i></i><input class="inp" data-catname="${i}" value="${esc(c)}" aria-label="Kategoriename"><span class="mv" style="display:flex;gap:2px"><button class="ib" data-act="cat-up" data-i="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button class="ib" data-act="cat-down" data-i="${i}" ${i<cats().length-1?'':'disabled'} aria-label="Nach unten">↓</button></span><button class="ib" data-act="cat-del" data-i="${i}" ${(counts.get(c)||0)||cats().length<2?'disabled':''} title="${counts.get(c)?'Enthält Rezepte':'Löschen'}" aria-label="Kategorie löschen">✕</button></div>`).join('');
   return `<div style="margin-bottom:18px"><h1 class="h1">Vorlagen</h1><p class="muted" style="margin:4px 0 0">Die Vorlage bestimmt nur das Aussehen. Die Rezeptdaten bleiben gleich, Änderungen gelten sofort für alle Rezepte mit dieser Vorlage.</p></div>
   <div class="tv">
@@ -792,7 +792,7 @@ function viewTemplates(){
         <div style="border-top:1px solid var(--line);margin-top:8px;padding-top:12px;display:flex;flex-direction:column;gap:8px">
           <p class="lbl" style="margin:0">Eigenes Feld hinzufügen</p>
           <input class="inp" id="cf-label" placeholder="Name, z. B. Weinempfehlung, Allergene, Haltbarkeit">
-          <input class="inp" id="cf-hint" placeholder="Hinweis für Claude (optional): was soll drinstehen?">
+          <input class="inp" id="cf-hint" placeholder="Hinweis für die KI (optional): was soll drinstehen?">
           <button class="btn sm" data-act="cf-add" style="align-self:flex-start">Feld hinzufügen</button>
         </div>
       </div>
@@ -874,16 +874,17 @@ Regeln:
 }
 function sampleErr(e){
   const c=e&&e.code;
-  if(c==='no_key')return 'Für Claude brauchst du einen API-Schlüssel (unter „Einstellungen“). Ohne Schlüssel geht „Text erkennen (ohne KI)“.';
-  if(c==='auth')return 'Der API-Schlüssel wird nicht akzeptiert. Prüfe ihn unter „Einstellungen“.';
+  if(c==='no_key')return 'Zum Auslesen mit KI brauchst du einen Schlüssel (unter „Einstellungen“, Gemini ist kostenlos). Ohne Schlüssel geht „Text erkennen (ohne KI)“.';
+  if(c==='auth')return 'Der Schlüssel wird nicht akzeptiert. Prüfe ihn unter „Einstellungen“.';
+  if(c==='region')return 'Die kostenlose Gemini-Stufe ist an deinem Standort nicht verfügbar. Nutze stattdessen Claude oder die Texterkennung ohne KI.';
   if(c==='credit')return 'Auf deinem API-Konto ist kein Guthaben mehr. Du kannst es unter platform.claude.com aufladen.';
   if(c==='model')return 'Das gewählte Modell ist nicht verfügbar. Wähle unter „Einstellungen“ ein anderes.';
-  if(c==='overloaded')return 'Claude ist gerade überlastet. Bitte in ein paar Minuten noch einmal versuchen.';
-  if(c==='offline')return 'Keine Internetverbindung. Für Claude brauchst du eine Verbindung.';
-  if(c==='rate_limited')return 'Gerade zu viele Anfragen oder dein Nutzungslimit ist erreicht. Bitte später noch einmal versuchen.';
+  if(c==='overloaded')return 'Die KI ist gerade überlastet. Bitte in ein paar Minuten noch einmal versuchen.';
+  if(c==='offline')return 'Keine Internetverbindung. Für die KI brauchst du eine Verbindung.';
+  if(c==='rate_limited')return AI.provider==='gemini'?'Das kostenlose Gemini-Limit ist gerade erreicht. Warte eine Minute (oder bis morgen, wenn das Tageslimit voll ist).':'Gerade zu viele Anfragen oder dein Nutzungslimit ist erreicht. Bitte später noch einmal versuchen.';
   if(c==='image_rejected'||c==='images_unavailable')return 'Ein Bild konnte nicht verarbeitet werden. Verwende PNG, JPG oder WebP.';
   if(c==='invalid_json'||c==='empty_completion')return 'Die Antwort war unvollständig. Bitte noch einmal auf „Rezept auslesen“ klicken.';
-  if(c==='refused')return 'Claude konnte diesen Inhalt nicht auslesen. Versuche einen anderen Ausschnitt.';
+  if(c==='refused')return 'Die KI konnte diesen Inhalt nicht auslesen. Versuche einen anderen Ausschnitt.';
   if(c==='prompt_too_large')return 'Der eingefügte Text ist zu lang. Kürze ihn auf das Rezept.';
   if(c==='session_expired')return 'Deine Anmeldung ist abgelaufen. Bitte melde dich neu an.';
   return 'Die Verbindung wurde unterbrochen. Bitte noch einmal versuchen.';
@@ -909,9 +910,9 @@ async function runExtract(){
   const max=(imgLimits&&imgLimits.maxCount)||20;
   if(tiles.length>max){tiles=tiles.slice(0,max);warn=`Die Screenshots waren sehr lang, es wurden nur die ersten ${max} Abschnitte gelesen. Bitte das Ende prüfen.`;}
   extractCtl=new AbortController();
-  setExMsg('Claude liest das Rezept … (das dauert meist 20–60 Sekunden)');
+  setExMsg(aiName()+' liest das Rezept … (das dauert meist 10–60 Sekunden)');
   try{
-    const opts={signal:extractCtl.signal,modelTier:'default',onText:({text})=>setExMsg(`Claude schreibt das Rezept ab … ${text.length} Zeichen`)};
+    const opts={signal:extractCtl.signal,modelTier:'default',onText:({text})=>setExMsg(`${aiName()} schreibt das Rezept ab … ${text.length} Zeichen`)};
     if(tiles.length)opts.images=tiles.map(x=>x.blob);
     const out=await sample.json(buildPrompt(t,tiles.length,U),opts);
     const rec=normalize(out,t,U);
@@ -930,7 +931,7 @@ async function aiFillExtras(){
   const d=S.draft;const t=tplById(d.templateId);const empty=t.customFields.filter(f=>!str(d.extra[f.key]));
   const msg=$('#aiExtrasMsg'),btn=$('#aiExtrasBtn');
   if(!empty.length){if(msg)msg.textContent='Alle Zusatzfelder sind schon ausgefüllt.';return;}
-  if(btn)btn.disabled=true;if(msg)msg.textContent='Claude denkt nach …';
+  if(btn)btn.disabled=true;if(msg)msg.textContent=aiName()+' denkt nach …';
   try{
     let images=[];
     if(imgLimits){const srcs=d._files?d._files.map(x=>x.url):(await Promise.all((d.screenshotIds||[]).map(getImgUrl))).filter(Boolean);try{images=(await makeTiles(srcs)).slice(0,imgLimits.maxCount||20).map(x=>x.blob);}catch(_){images=[];}}
@@ -941,7 +942,7 @@ async function aiFillExtras(){
     const out=await sample.json(prompt,opts);
     let n=0;for(const f of empty){const v=str(out&&out[f.key]);if(v){d.extra[f.key]=v;n++;}}
     const keepScroll=scrollY;render();scrollTo({top:keepScroll});
-    toast(n?`${n} Feld(er) ausgefüllt. Bitte prüfen.`:'Claude hat dazu nichts Sicheres gefunden.');
+    toast(n?`${n} Feld(er) ausgefüllt. Bitte prüfen.`:'Die KI hat dazu nichts Sicheres gefunden.');
   }catch(e){if(btn)btn.disabled=false;if(msg)msg.textContent=sampleErr(e);}
 }
 
@@ -1176,8 +1177,8 @@ function viewPantry(){
   const seg=`<div class="seg">${[['all','Alle Treffer',nAll],['two','Fehlt max. 2',nTwo],['full','Alles da',nFull]].map(([v,l,n])=>`<button data-act="p-filter" data-v="${v}" aria-pressed="${P.filter===v}">${l} · ${n}</button>`).join('')}</div>`;
   let results;
   if(!terms.length)results=`<div class="empty"><p class="h2">Was ist im Kühlschrank?</p><p class="muted">Gib links ein, was du da hast. Hier erscheinen dann die passenden Rezepte aus deiner Kartei, sortiert nach den wenigsten fehlenden Zutaten.</p></div>`;
-  else if(!S.recipes.length)results=`<div class="empty"><p class="h2">Noch keine Rezepte in der Kartei</p><p class="muted">Lass dir unten eine Idee von Claude vorschlagen oder lies zuerst ein paar Rezepte ein.</p></div>`;
-  else if(!shown.length)results=`<div class="empty"><p class="h2">${rows.length?'Mit diesem Filter passt nichts':'Kein Rezept passt dazu'}</p><p class="muted">${rows.length?'Wähle „Alle Treffer“, um auch Rezepte mit mehr fehlenden Zutaten zu sehen.':'Probiere andere Schreibweisen oder lass Claude genauer suchen, Claude kennt auch Ersatzzutaten.'}</p></div>`;
+  else if(!S.recipes.length)results=`<div class="empty"><p class="h2">Noch keine Rezepte in der Kartei</p><p class="muted">Lass dir unten eine Rezeptidee vorschlagen oder lies zuerst ein paar Rezepte ein.</p></div>`;
+  else if(!shown.length)results=`<div class="empty"><p class="h2">${rows.length?'Mit diesem Filter passt nichts':'Kein Rezept passt dazu'}</p><p class="muted">${rows.length?'Wähle „Alle Treffer“, um auch Rezepte mit mehr fehlenden Zutaten zu sehen.':'Probiere andere Schreibweisen oder nutze die genauere KI-Suche, die kennt auch Ersatzzutaten.'}</p></div>`;
   else results=`<div class="plist">${shown.map(x=>presHtml(x.r,x.a,x.tip)).join('')}</div>`;
   return `<div style="margin-bottom:18px"><h1 class="h1">Was hab ich da?</h1><p class="muted" style="margin:4px 0 0">Zutaten eingeben und passende Rezepte aus deiner Kartei finden.</p></div>
   <div class="pantry"><aside>
@@ -1188,16 +1189,16 @@ function viewPantry(){
       <label class="row" style="gap:8px;font-size:14px;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="p-staples" ${P.staples?'checked':''} style="margin-top:4px"> Salz, Pfeffer, Öl und Wasser habe ich immer</label>
       ${sugg.length?`<div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">Aus deinen Rezepten</span><div class="sugg">${sugg.map(x=>`<button data-act="p-sugg" data-v="${esc(x)}">+ ${esc(x)}</button>`).join('')}</div></div>`:''}
     </div>
-    ${!AI.key?`<div class="panel" style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Mit Claude</span><p class="muted" style="margin:0;font-size:13.5px">Mit einem eigenen API-Schlüssel erkennt Claude auch andere Bezeichnungen, schlägt Ersatzzutaten vor und erfindet neue Rezepte aus deinen Zutaten. <button class="linkbtn" data-act="nav" data-view="settings">Schlüssel hinterlegen</button></p></div>`:''}
+    ${!AI.key?`<div class="panel" style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Mit KI</span><p class="muted" style="margin:0;font-size:13.5px">Mit einem KI-Schlüssel (Gemini gibt es kostenlos) erkennt die App auch andere Bezeichnungen, schlägt Ersatzzutaten vor und erfindet neue Rezepte aus deinen Zutaten. <button class="linkbtn" data-act="nav" data-view="settings">Schlüssel hinterlegen</button></p></div>`:''}
     ${AI.key?`<div class="panel" style="display:flex;flex-direction:column;gap:10px">
-      <span class="lbl">Mit Claude</span>
-      <button class="btn" data-act="p-ai" ${!terms.length||!S.recipes.length||P.busy?'disabled':''}>${P.busy==='ai'?'Claude sucht …':'Genauer suchen, mit Ersatzzutaten'}</button>
-      <button class="btn" data-act="p-idea" ${!terms.length||P.busy||!canWrite?'disabled':''}>${P.busy==='idea'?'Claude überlegt …':'Neue Rezeptidee mit diesen Zutaten'}</button>
+      <span class="lbl">Mit KI</span>
+      <button class="btn" data-act="p-ai" ${!terms.length||!S.recipes.length||P.busy?'disabled':''}>${P.busy==='ai'?aiName()+' sucht …':'Genauer suchen, mit Ersatzzutaten'}</button>
+      <button class="btn" data-act="p-idea" ${!terms.length||P.busy||!canWrite?'disabled':''}>${P.busy==='idea'?aiName()+' überlegt …':'Neue Rezeptidee mit diesen Zutaten'}</button>
       <small class="muted" style="font-size:12.5px">${P.msg?esc(P.msg):'Die genaue Suche erkennt auch andere Bezeichnungen und schlägt Ersatz vor. Eine Rezeptidee kannst du prüfen und in deine Kartei übernehmen.'}</small>
     </div>`:''}
   </aside>
   <div style="min-width:0;display:flex;flex-direction:column;gap:14px">
-    ${terms.length&&S.recipes.length?`<div class="row">${seg}<span class="spacer"></span>${aiOn?'<span class="muted" style="font-size:13px">Ergebnis von Claude</span><button class="btn sm ghost" data-act="p-ai-off">Einfache Suche zeigen</button>':''}</div>`:''}
+    ${terms.length&&S.recipes.length?`<div class="row">${seg}<span class="spacer"></span>${aiOn?'<span class="muted" style="font-size:13px">Ergebnis der KI-Suche</span><button class="btn sm ghost" data-act="p-ai-off">Einfache Suche zeigen</button>':''}</div>`:''}
     ${results}
   </div></div>`;
 }
@@ -1215,7 +1216,7 @@ Antworte NUR mit JSON in dieser Form: {"results":[{"id":"…","missing":["Eier"]
   try{
     const out=await sample.json(prompt,{modelTier:'default'});
     const res=(out&&Array.isArray(out.results)?out.results:[]).filter(x=>x&&S.recipes.some(r=>r.id===String(x.id))).map(x=>({id:String(x.id),missing:Array.isArray(x.missing)?x.missing.map(str).filter(Boolean):[],tip:str(x.tip)}));
-    P.ai={key:pantryKey(),results:res};P.msg=res.length?'':'Claude hat kein passendes Rezept gefunden. Wie wäre es mit einer neuen Idee?';
+    P.ai={key:pantryKey(),results:res};P.msg=res.length?'':'Kein passendes Rezept gefunden. Wie wäre es mit einer neuen Idee?';
   }catch(e){P.msg=sampleErr(e);}
   P.busy=null;render();
 }
@@ -1236,8 +1237,8 @@ ${t.customFields.length?'- extra: '+t.customFields.map(f=>`"${f.key}" = ${f.labe
   try{
     const out=await sample.json(prompt,{modelTier:'default',cache:false});
     const rec=normalize(out,t,{cat:'auto'});
-    rec.source='Rezeptidee von Claude';rec._new=true;rec._from='pantry';
-    rec._warn='Das ist ein Vorschlag von Claude und kein erprobtes Rezept. Prüfe Mengen, Zeiten und Temperaturen, bevor du es speicherst.';
+    rec.source='Rezeptidee von '+aiName();rec._new=true;rec._from='pantry';
+    rec._warn='Das ist ein KI-Vorschlag und kein erprobtes Rezept. Prüfe Mengen, Zeiten und Temperaturen, bevor du es speicherst.';
     P.busy=null;S.draft=rec;go('editor');
   }catch(e){P.busy=null;P.msg=sampleErr(e);render();}
 }
@@ -1270,7 +1271,8 @@ document.addEventListener('click',async ev=>{
     case 'sheet-share': if(sheetState&&sheetState.file){try{await navigator.share({files:[sheetState.file],title:sheetState.file.name});}catch(_){}}break;
     case 'sheet-dl': setTimeout(closeSheet,400);break;
     case 'key-save': await saveKey();break;
-    case 'key-del': await saveAi({key:'',model:''});S.aiStatus=null;toast('Schlüssel entfernt.');render();break;
+    case 'key-del': await saveAi(AI.provider==='claude'?{ckey:'',cmodel:''}:{gkey:'',gmodel:''});AI.models=[];S.aiStatus=null;toast('Schlüssel entfernt.');render();break;
+    case 'ai-prov': await saveAi({provider:b.dataset.v});AI.models=[];S.aiStatus=null;render();break;
     case 'key-show': {const i=$('#apiKey');if(i)i.type=i.type==='password'?'text':'password';break;}
     case 'exp': await exportAll(!!($('#expShots')&&$('#expShots').checked));break;
     case 'persist': await askPersist(true);render();break;
@@ -1342,7 +1344,7 @@ document.addEventListener('change',async ev=>{
   else if(el.id==='edTpl'&&S.draft){S.draft.templateId=el.value;const y=scrollY;render();scrollTo({top:y});}
   else if(el.id==='u-tpl'){S.upload.tplId=el.value;render();}
   else if(el.id==='u-cat'){S.upload.cat=el.value;}
-  else if(el.id==='modelSel'){await saveAi({key:AI.key,model:el.value});toast('Modell gespeichert.');}
+  else if(el.id==='modelSel'){await saveAi(AI.provider==='claude'?{cmodel:el.value}:{gmodel:el.value});toast('Modell gespeichert.');}
   else if(el.id==='impIn'){const f=el.files[0];el.value='';if(f)await importFile(f);}
   else if(el.id==='p-staples'){S.pantry.staples=el.checked;S.pantry.ai=null;savePantry();render();}
   else if(el.id==='u-translate'){S.upload.translate=el.checked;}
@@ -1431,11 +1433,15 @@ assets={
 };
 async function askPersist(force){try{if(!navigator.storage||!navigator.storage.persist)return;if(!force&&S.persistAsked)return;S.persistAsked=true;S.persisted=await navigator.storage.persist();}catch(_){}}
 
-/* ---------- Claude über eigenen API-Schlüssel ---------- */
-const AI={key:'',model:'',models:[]};
+/* ---------- KI über eigenen Schlüssel (Gemini kostenlos oder Claude) ---------- */
+const AI={provider:'gemini',ckey:'',cmodel:'',gkey:'',gmodel:'',key:'',model:'',models:[]};
 const FALLBACK_MODEL='claude-sonnet-4-5';
+const FALLBACK_GEMINI='gemini-2.5-flash';
+function aiName(){return AI.provider==='claude'?'Claude':'Gemini';}
+function syncAiActive(){if(AI.provider==='claude'){AI.key=AI.ckey;AI.model=AI.cmodel;}else{AI.key=AI.gkey;AI.model=AI.gmodel;}}
+function loadAiStored(v){v=v||{};if(v.key&&!v.ckey){v.ckey=v.key;v.cmodel=v.model;}AI.ckey=v.ckey||'';AI.cmodel=v.cmodel||'';AI.gkey=v.gkey||'';AI.gmodel=v.gmodel||'';AI.provider=v.provider||(AI.ckey&&!AI.gkey?'claude':'gemini');syncAiActive();}
+async function saveAi(p){Object.assign(AI,p);syncAiActive();await IDB.put('kv',{provider:AI.provider,ckey:AI.ckey,cmodel:AI.cmodel,gkey:AI.gkey,gmodel:AI.gmodel},'ai');}
 function apiHeaders(key){return {'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};}
-async function saveAi(v){AI.key=v.key||'';AI.model=v.model||'';await IDB.put('kv',{key:AI.key,model:AI.model},'ai');}
 function blobToB64(b){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]);fr.onerror=()=>rej(fr.error);fr.readAsDataURL(b);});}
 function parseLoose(t){
   t=String(t||'').trim();try{return JSON.parse(t);}catch(_){}
@@ -1453,13 +1459,13 @@ function httpErr(status,msg){
   if(status===529||status===503||/overloaded/i.test(msg))return {code:'overloaded',message:msg};
   return {code:'upstream_error',message:msg};
 }
-async function aiText(prompt,{images=[],signal,onText,maxTokens=8000}={}){
-  if(!AI.key)throw {code:'no_key'};
+async function claudeText(prompt,{images=[],signal,onText,maxTokens=8000}={}){
+  if(!AI.ckey)throw {code:'no_key'};
   const content=[];
   for(const b of images){const type=['image/jpeg','image/png','image/webp','image/gif'].includes(b.type)?b.type:'image/jpeg';content.push({type:'image',source:{type:'base64',media_type:type,data:await blobToB64(b)}});}
   content.push({type:'text',text:prompt});
   let res;
-  try{res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal,headers:apiHeaders(AI.key),body:JSON.stringify({model:AI.model||FALLBACK_MODEL,max_tokens:maxTokens,stream:true,messages:[{role:'user',content}]})});}
+  try{res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal,headers:apiHeaders(AI.ckey),body:JSON.stringify({model:AI.cmodel||FALLBACK_MODEL,max_tokens:maxTokens,stream:true,messages:[{role:'user',content}]})});}
   catch(e){if(e&&e.name==='AbortError')throw {code:'cancelled'};throw {code:'offline'};}
   if(!res.ok){let msg='';try{const j=await res.json();msg=(j.error&&j.error.message)||'';}catch(_){}throw httpErr(res.status,msg);}
   const reader=res.body.getReader();const dec=new TextDecoder();let buf='',text='',stop='';
@@ -1474,24 +1480,73 @@ async function aiText(prompt,{images=[],signal,onText,maxTokens=8000}={}){
   if(!text.trim())throw {code:'empty_completion'};
   return {text,truncated:stop==='max_tokens'};
 }
+function geminiErr(status,msg){
+  if(/location is not supported|not available in your country|region/i.test(msg))return {code:'region',message:msg};
+  if(/api key not valid|API_KEY_INVALID|permission/i.test(msg)||status===401||status===403)return {code:'auth',message:msg};
+  if(status===429)return {code:'rate_limited',message:msg};
+  if(status===404)return {code:'model',message:msg};
+  if(status===503||status===500||/overloaded/i.test(msg))return {code:'overloaded',message:msg};
+  if(status===413)return {code:'prompt_too_large',message:msg};
+  return {code:'upstream_error',message:msg};
+}
+async function geminiText(prompt,{images=[],signal,onText,maxTokens=16000}={}){
+  if(!AI.gkey)throw {code:'no_key'};
+  const parts=[];
+  for(const b of images){const type=['image/jpeg','image/png','image/webp'].includes(b.type)?b.type:'image/jpeg';parts.push({inline_data:{mime_type:type,data:await blobToB64(b)}});}
+  parts.push({text:prompt});
+  const model=(AI.gmodel||FALLBACK_GEMINI).replace(/^models\//,'');
+  let res;
+  try{res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,{method:'POST',signal,headers:{'content-type':'application/json','x-goog-api-key':AI.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.2}})});}
+  catch(e){if(e&&e.name==='AbortError')throw {code:'cancelled'};throw {code:'offline'};}
+  if(!res.ok){let msg='';try{const j=await res.json();msg=(j.error&&j.error.message)||'';}catch(_){}throw geminiErr(res.status,msg);}
+  const reader=res.body.getReader();const dec=new TextDecoder();let buf='',text='',stop='';
+  try{
+    for(;;){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
+      while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;
+        let ev;try{ev=JSON.parse(line.slice(5).trim());}catch(_){continue;}
+        if(ev.error)throw geminiErr(ev.error.code||500,ev.error.message||'');
+        if(ev.promptFeedback&&ev.promptFeedback.blockReason)throw {code:'refused'};
+        const c=ev.candidates&&ev.candidates[0];if(!c)continue;
+        for(const p of (c.content&&c.content.parts)||[])if(p.text&&!p.thought){text+=p.text;if(onText)try{onText({text,delta:p.text});}catch(_){}}
+        if(c.finishReason)stop=c.finishReason;}}
+  }catch(e){if(e&&e.code)throw e;if(e&&e.name==='AbortError')throw {code:'cancelled',text};throw {code:'upstream_error',text};}
+  if(stop==='SAFETY'||stop==='PROHIBITED_CONTENT')throw {code:'refused'};
+  if(!text.trim())throw {code:'empty_completion'};
+  return {text,truncated:stop==='MAX_TOKENS'};
+}
+function aiText(p,o){return AI.provider==='claude'?claudeText(p,o):geminiText(p,o);}
 sample=Object.assign((p,o={})=>aiText(p,o),{
   json:async(p,o={})=>{const r=await aiText(p,o);if(r.truncated)throw {code:'invalid_json',text:r.text};return parseLoose(r.text);},
   limits:async()=>({maxPromptBytes:262144,images:{maxCount:20}})
 });
 imgLimits={maxCount:20};
-async function loadModels(key){
-  const res=await fetch('https://api.anthropic.com/v1/models?limit=100',{headers:apiHeaders(key)}).catch(()=>{throw {code:'offline'};});
-  if(!res.ok){let msg='';try{msg=((await res.json()).error||{}).message||'';}catch(_){}throw httpErr(res.status,msg);}
-  const j=await res.json();return (j.data||[]).map(m=>({id:m.id,name:m.display_name||m.id}));
+async function loadModels(provider,key){
+  if(provider==='claude'){
+    const res=await fetch('https://api.anthropic.com/v1/models?limit=100',{headers:apiHeaders(key)}).catch(()=>{throw {code:'offline'};});
+    if(!res.ok){let msg='';try{msg=((await res.json()).error||{}).message||'';}catch(_){}throw httpErr(res.status,msg);}
+    const j=await res.json();return (j.data||[]).map(m=>({id:m.id,name:m.display_name||m.id}));
+  }
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}}).catch(()=>{throw {code:'offline'};});
+  if(!res.ok){let msg='';try{msg=((await res.json()).error||{}).message||'';}catch(_){}throw geminiErr(res.status,msg);}
+  const j=await res.json();
+  const ver=n=>parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/)||[])[1]||0);
+  return (j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/^models\/gemini-/.test(m.name)&&!/(embedding|tts|image|live|audio|learnlm|aqa|exp|thinking|robotics|computer|nano)/i.test(m.name))
+    .map(m=>({id:m.name.replace(/^models\//,''),name:m.displayName||m.name.replace(/^models\//,''),v:ver(m.name),pre:/preview/i.test(m.name),lite:/lite/i.test(m.name),flash:/flash/i.test(m.name)}))
+    .sort((a,b)=>(b.flash-a.flash)||(a.pre-b.pre)||(a.lite-b.lite)||(b.v-a.v)||coll.compare(a.id,b.id));
 }
 async function saveKey(){
-  const inp=$('#apiKey');const key=(inp&&inp.value||'').trim();
+  const inp=$('#apiKey');const key=(inp&&inp.value||'').trim();const prov=AI.provider;
   if(!key){toast('Bitte zuerst den Schlüssel einfügen.','err');return;}
   S.aiStatus={busy:true};render();
   try{
-    const models=await loadModels(key);AI.models=models;
-    const keep=models.find(m=>m.id===AI.model);const pick=keep||models.find(m=>/sonnet/i.test(m.id))||models[0];
-    await saveAi({key,model:pick?pick.id:FALLBACK_MODEL});S.aiStatus={ok:true};toast('Schlüssel gespeichert und geprüft.');
+    const models=await loadModels(prov,key);AI.models=models;
+    const cur=prov==='claude'?AI.cmodel:AI.gmodel;
+    const keep=models.find(m=>m.id===cur);
+    const pick=keep||(prov==='claude'?(models.find(m=>/sonnet/i.test(m.id))||models[0]):models[0]);
+    const id=pick?pick.id:(prov==='claude'?FALLBACK_MODEL:FALLBACK_GEMINI);
+    await saveAi(prov==='claude'?{ckey:key,cmodel:id}:{gkey:key,gmodel:id});
+    if(prov==='gemini'){try{await geminiText('Antworte nur mit dem Wort OK.',{maxTokens:400});}catch(e){if(e&&e.code!=='empty_completion')throw e;}}
+    S.aiStatus={ok:true};toast('Schlüssel gespeichert und geprüft.');
   }catch(e){S.aiStatus={err:sampleErr(e)};}
   render();
 }
@@ -1764,13 +1819,17 @@ function viewSettings(){
   <div class="setgrid">
     ${viewSyncPanel()}
     <section class="panel">
-      <h2 class="h2">Claude (optional)</h2>
-      <p class="muted" style="margin:0;font-size:14px">Mit einem eigenen API-Schlüssel liest Claude Screenshots sauber aus, übersetzt, schneidet Fotos zu und hilft bei „Was hab ich da?“. Abgerechnet wird nach Nutzung über dein Konto auf <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>, grob ein paar Cent pro Rezept. Ohne Schlüssel funktioniert alles andere trotzdem.</p>
-      <label class="field"><span>API-Schlüssel</span><div class="row" style="flex-wrap:nowrap"><input class="inp" id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="${esc(AI.key)}"><button class="btn sm ghost" data-act="key-show" aria-label="Schlüssel anzeigen">Zeigen</button></div></label>
+      <h2 class="h2">KI zum Auslesen (optional)</h2>
+      <p class="muted" style="margin:0;font-size:14px">Ohne KI erkennt die App nur den Text. Mit KI werden Screenshots sauber ausgelesen und übersetzt, das Foto wird ausgeschnitten, und „Was hab ich da?“ findet auch Ersatzzutaten.</p>
+      <div class="seg"><button data-act="ai-prov" data-v="gemini" aria-pressed="${AI.provider==='gemini'}">Gemini · kostenlos</button><button data-act="ai-prov" data-v="claude" aria-pressed="${AI.provider==='claude'}">Claude · Cent-Beträge</button></div>
+      ${AI.provider==='gemini'
+        ?`<p style="margin:0;font-size:14px">Kostenloser Schlüssel von Google, ohne Kreditkarte: Auf <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> mit deinem Google-Konto anmelden → <b>„API-Schlüssel erstellen“</b> → kopieren und hier einfügen.</p><p class="muted" style="margin:0;font-size:12.5px">Die kostenlose Stufe hat Tages- und Minutenlimits, für ein Rezeptbuch reicht das gut. Google kann Eingaben aus der kostenlosen Stufe zur Verbesserung seiner Dienste verwenden. Lade also nur Rezept-Screenshots hoch, nichts Privates.</p>`
+        :`<p style="margin:0;font-size:14px">Schlüssel auf <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a> erstellen (Guthaben aufladen, Monatslimit setzen, „API Keys“). Abgerechnet wird nach Nutzung, grob ein paar Cent pro Rezept.</p>`}
+      <label class="field"><span>${AI.provider==='gemini'?'Gemini-Schlüssel':'Claude-Schlüssel'}</span><div class="row" style="flex-wrap:nowrap"><input class="inp" id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="${AI.provider==='gemini'?'AIza…':'sk-ant-…'}" value="${esc(AI.key)}"><button class="btn sm ghost" data-act="key-show" aria-label="Schlüssel anzeigen">Zeigen</button></div></label>
       <div class="row"><button class="btn primary" data-act="key-save" ${st.busy?'disabled':''}>${st.busy?'Wird geprüft …':'Speichern & prüfen'}</button>${AI.key?'<button class="btn ghost danger" data-act="key-del">Entfernen</button>':''}</div>
       ${st.ok?'<p class="okline" style="margin:0">Schlüssel funktioniert.</p>':st.err?`<p class="errline" style="margin:0">${esc(st.err)}</p>`:''}
-      ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.</small></label>`:''}
-      <p class="muted" style="margin:0;font-size:12.5px">Der Schlüssel wird nur in diesem Browser gespeichert und direkt an Anthropic geschickt. Stell im Konto ein monatliches Ausgabenlimit ein, dann kann nichts aus dem Ruder laufen.</p>
+      ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>${AI.provider==='gemini'?'Flash ist schnell und im kostenlosen Kontingent enthalten.':'Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.'}</small></label>`:''}
+      <p class="muted" style="margin:0;font-size:12.5px">Der Schlüssel wird nur auf diesem Gerät gespeichert. Trag ihn auf jedem Gerät ein, auf dem du Screenshots auslesen willst.</p>
     </section>
     <section class="panel">
       <h2 class="h2">Sicherung</h2>
@@ -1803,7 +1862,7 @@ render();
     }
     const [recs,tpls,settings,ai,lastExport]=await Promise.all([IDB.all('recipes'),IDB.all('templates'),IDB.get('kv','settings'),IDB.get('kv','ai'),IDB.get('kv','lastExport')]);
     for(const r of recs)Store.recipes.set(r.id,r);for(const t of tpls)Store.templates.set(t.id,t);Store.settings=settings||null;
-    AI.key=(ai&&ai.key)||'';AI.model=(ai&&ai.model)||'';S.lastExport=lastExport||0;
+    loadAiStored(ai);S.lastExport=lastExport||0;
     const [sy,cfg]=await Promise.all([IDB.get('kv','sync'),IDB.get('kv','fbcfg')]);SYNC.code=(sy&&sy.code)||'';SYNC.config=cfg||null;
     try{if(navigator.storage&&navigator.storage.persisted)S.persisted=await navigator.storage.persisted();}catch(_){}
   }catch(e){S.noDb=true;render();return;}

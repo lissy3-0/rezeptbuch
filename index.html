@@ -265,6 +265,16 @@ main a{color:var(--accent)}
 .codebox{font:800 22px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.06em;background:var(--accent-soft);border-radius:14px;padding:12px 14px;text-align:center;overflow-wrap:anywhere}
 @media (max-width:700px){.syncpill span{display:none}.syncpill{padding:8px}}
 
+/* Titelschriften */
+.sheet.tf-script .sh-title{font-family:'Dancing Script','Brush Script MT',cursive!important;font-style:normal!important;font-weight:700!important;letter-spacing:0}
+.sheet.tf-serif .sh-title{font-family:'Playfair Display',Georgia,serif!important;font-style:italic!important;font-weight:600!important;letter-spacing:0}
+.sheet.tf-sans .sh-title{font-family:'Nunito',Arial,sans-serif!important;font-style:normal!important;font-weight:800!important;letter-spacing:-.01em}
+.sheet.tf-slab .sh-title{font-family:'Zilla Slab',Rockwell,Georgia,serif!important;font-style:normal!important;font-weight:700!important}
+.sheet.tf-hand .sh-title{font-family:'Caveat',cursive!important;font-style:normal!important;font-weight:600!important;font-size:2.9em;letter-spacing:0}
+.refimg{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.refimg button{border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;cursor:zoom-in;background:var(--surface)}
+.refimg img{display:block;height:84px;width:auto}
+
 /* Meldungen */
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
 #toast.err{background:var(--danger);color:var(--surface)}
@@ -434,7 +444,7 @@ main a{color:var(--accent)}
       <button class="tab" data-act="nav" data-view="library" id="tab-library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="9" rx="2"/><rect x="13.5" y="3.5" width="7" height="6" rx="2"/><rect x="3.5" y="15.5" width="7" height="5" rx="2"/><rect x="13.5" y="12.5" width="7" height="8" rx="2"/></svg><span class="tl">Rezepte</span><span class="ts">Rezepte</span></button>
       <button class="tab" data-act="nav" data-view="pantry" id="tab-pantry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h16l-1.6 8.6a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6z"/><path d="M8.5 10l3-6M15.5 10l-3-6"/></svg><span class="tl">Was hab ich da?</span><span class="ts">Zutaten</span></button>
       <button class="tab" data-act="nav" data-view="upload" id="tab-upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></svg><span class="tl">Neues Rezept</span><span class="ts">Neu</span></button>
-      <button class="tab" data-act="nav" data-view="templates" id="tab-templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg><span class="tl">Vorlagen</span><span class="ts">Vorlagen</span></button>
+      <button class="tab" data-act="nav" data-view="templates" id="tab-templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg><span class="tl">Vorlagen &amp; Kategorien</span><span class="ts">Vorlagen</span></button>
       <button class="tab" data-act="nav" data-view="settings" id="tab-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg><span class="tl">Einstellungen</span><span class="ts">Mehr</span></button>
     </nav>
   </div>
@@ -446,12 +456,14 @@ main a{color:var(--accent)}
 <input type="file" id="impIn" accept="application/json,.json" hidden>
 <input type="file" id="fileIn" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
 <input type="file" id="photoIn" accept="image/png,image/jpeg,image/webp" hidden>
+<input type="file" id="tplImgIn" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" hidden>
 
 <script>
 'use strict';
 /* ---------- Konstanten ---------- */
-const DEFAULT_CATS=['Frühstück','Getränke','Snacks','Mahlzeiten','Leichte Kost','Nachtische','Gebackenes','Sonstiges'];
-const CAT_HUES={'Frühstück':42,'Getränke':198,'Snacks':275,'Mahlzeiten':150,'Leichte Kost':92,'Nachtische':338,'Gebackenes':24,'Sonstiges':215};
+const DEFAULT_CATS=['Frühstück','Snacks','Salate','Suppen und Eintöpfe','Hauptgerichte','Desserts','Kuchen und Gebäck','Getränke','Extras'];
+const OLD2NEW={'Mahlzeiten':'Hauptgerichte','Leichte Kost':'Salate','Nachtische':'Desserts','Gebackenes':'Kuchen und Gebäck','Sonstiges':'Extras'};
+const CAT_HUES={'Frühstück':42,'Snacks':275,'Salate':100,'Suppen und Eintöpfe':28,'Hauptgerichte':150,'Desserts':338,'Kuchen und Gebäck':14,'Getränke':198,'Extras':225,'Mahlzeiten':150,'Leichte Kost':92,'Nachtische':338,'Gebackenes':24,'Sonstiges':215};
 const PAPER={
   A4:{w:794,h:1123,mmW:210,mmH:297,fmt:'a4',o:'portrait',pad:52,base:12.5,label:'A4 hoch'},
   A5:{w:559,h:794,mmW:148,mmH:210,fmt:'a5',o:'portrait',pad:36,base:10.5,label:'A5 hoch'},
@@ -459,6 +471,8 @@ const PAPER={
 };
 const STYLES={blush:'Blush',bogen:'Bogen',pastell:'Pastell',modern:'Modern',klassisch:'Klassisch',karte:'Karteikarte'};
 const PLAYFUL=['blush','bogen','pastell'];
+const TITLE_FONTS={'':'Wie Stil',script:'Schreibschrift',serif:'Serif kursiv',sans:'Modern',slab:'Slab',hand:'Handschrift'};
+const PAPERS=['','#FFF9F2','#FFF3F5','#F2F8F3','#F6F2FB','#F9F5EC','#F1F6FA'];
 const BASE_SECTIONS=[
   {key:'photo',label:'Foto',col:'b'},{key:'intro',label:'Beschreibung',col:'b'},{key:'meta',label:'Eckdaten',col:'a'},
   {key:'ingredients',label:'Zutaten',col:'a'},{key:'steps',label:'Zubereitung',col:'b'},{key:'nutrition',label:'Nährwerte pro Portion',col:'a'},
@@ -516,7 +530,7 @@ function normTpl(t){
     accent:/^#[0-9a-f]{6}$/i.test(t.accent||'')?t.accent:'#D46A8C',fontScale:+t.fontScale||1,showCategory:t.showCategory!==false,showTags:t.showTags!==false,
     customFields:Array.isArray(t.customFields)?t.customFields.filter(f=>f&&f.key).map(f=>({key:f.key,label:f.label||f.key,hint:f.hint||''})):[],
     sections:Array.isArray(t.sections)?t.sections.filter(s=>s&&s.key).map(s=>({key:s.key,label:s.label||'',on:s.on!==false,col:s.col==='a'?'a':'b'})):[],
-    createdAt:t.createdAt||0,_virtual:!!t._virtual};
+    createdAt:t.createdAt||0,_virtual:!!t._virtual,titleFont:TITLE_FONTS[t.titleFont]?t.titleFont:'',paperColor:/^#[0-9a-f]{6}$/i.test(t.paperColor||'')?t.paperColor:''};
   const keys=new Set(o.sections.map(s=>s.key));
   for(const b of BASE_SECTIONS)if(!keys.has(b.key))o.sections.push({key:b.key,label:b.label,on:false,col:b.col});
   for(const f of o.customFields)if(!keys.has('x:'+f.key))o.sections.push({key:'x:'+f.key,label:f.label,on:true,col:'a'});
@@ -530,7 +544,7 @@ function allTemplates(){
 function tplById(id){const L=allTemplates();return L.find(t=>t.id===id)||L.find(t=>t.id===S.settings.defaultTemplateId)||L[0];}
 function defaultTplId(){return tplById(S.settings.defaultTemplateId).id;}
 function cats(){return S.settings.categories;}
-function matchCat(c){const L=cats();const f=L.find(x=>x.toLowerCase()===String(c||'').trim().toLowerCase());return f||(L.includes('Sonstiges')?'Sonstiges':L[0]);}
+function matchCat(c){const L=cats();const f=L.find(x=>x.toLowerCase()===String(c||'').trim().toLowerCase());return f||(L.includes(OLD2NEW[String(c||'').trim()])?OLD2NEW[String(c||'').trim()]:L.includes('Extras')?'Extras':L.includes('Sonstiges')?'Sonstiges':L[0]);}
 
 /* ---------- Rezeptblatt ---------- */
 function photoSrc(r){return r._photoUrl||(r.photoId?(IMG.get(r.photoId)||''):'');}
@@ -572,7 +586,7 @@ function renderSheet(r,t){
     body=`<div class="cols"><div class="col col-a">${a}</div><div class="col col-b">${b}</div></div>`;
   }else body=secs.map(s=>sectionHtml(s,r,t)).join('');
   const head=`<header class="sh-head">${t.style==='pastell'?'<div class="tape"></div>':''}${t.showCategory&&r.category?`<span class="sh-cat">${esc(r.category)}</span>`:''}<h1 class="sh-title">${esc(r.title||'Ohne Titel')}</h1>${t.showTags&&(r.tags||[]).length?`<div class="sh-tags">${r.tags.map(x=>`<span class="tag">${esc(x)}</span>`).join('<span class="tsep"> · </span>')}</div>`:''}</header>`;
-  return `<div class="sheet st-${t.style} ${t.columns===2?'two':'one'} p-${t.paper}" data-paper="${t.paper}" style="--pw:${P.w}px;--ph:${P.h}px;--pad:${P.pad}px;--base:${P.base}px;--fs:${t.fontScale};--acc:${t.accent};--acc-soft:${soften(t.accent,.8)};--acc-pale:${soften(t.accent,.93)};--acc-deep:${darken(t.accent)}">${t.style==='karte'?'<div class="rand"></div>':''}${head}${body}</div>`;
+  return `<div class="sheet st-${t.style} ${t.columns===2?'two':'one'} p-${t.paper}${t.titleFont?' tf-'+t.titleFont:''}" data-paper="${t.paper}" style="${t.paperColor?'background:'+t.paperColor+';':''}--pw:${P.w}px;--ph:${P.h}px;--pad:${P.pad}px;--base:${P.base}px;--fs:${t.fontScale};--acc:${t.accent};--acc-soft:${soften(t.accent,.8)};--acc-pale:${soften(t.accent,.93)};--acc-deep:${darken(t.accent)}">${t.style==='karte'?'<div class="rand"></div>':''}${head}${body}</div>`;
 }
 function previewHtml(r,t){return `<div class="preview"><div class="pv-frame"><div class="pv-scale">${renderSheet(r,t)}</div></div></div>`;}
 function mountPreviews(){
@@ -642,7 +656,7 @@ function libResults(){
 function viewLibrary(){
   const counts=new Map();for(const r of S.recipes)counts.set(r.category,(counts.get(r.category)||0)+1);
   const nav=[`<button class="catbtn all" data-act="cat" data-cat="alle" aria-current="${S.cat==='alle'}">Alle<span class="n">${S.recipes.length}</span></button>`]
-    .concat(cats().map(c=>`<button class="catbtn" data-act="cat" data-cat="${esc(c)}" aria-current="${S.cat===c}" style="--h:${hueOf(c)}"><span class="dot"></span>${esc(c)}<span class="n">${counts.get(c)||0}</span></button>`)).join('');
+    .concat(cats().map(c=>`<button class="catbtn" data-act="cat" data-cat="${esc(c)}" aria-current="${S.cat===c}" style="--h:${hueOf(c)}"><span class="dot"></span>${esc(c)}<span class="n">${counts.get(c)||0}</span></button>`)).concat(['<button class="catbtn" data-act="cat-new-go" style="border-style:dashed;color:var(--muted)">+ Kategorie</button>']).join('');
   const nVis=visibleForPdf().length;
   return `<div class="lib"><div class="libbar"><input class="inp" id="q" type="search" placeholder="Suchen: Titel, Zutat, Schlagwort …" value="${esc(S.q)}" aria-label="Rezepte durchsuchen">
     <select class="inp" id="sortSel" style="width:auto" aria-label="Sortierung"><option value="name" ${S.sort==='name'?'selected':''}>A–Z</option><option value="neu" ${S.sort==='neu'?'selected':''}>Neueste zuerst</option></select>
@@ -772,9 +786,11 @@ function viewTemplates(){
       <span class="mv"><button class="ib" data-act="sec-up" data-i="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button class="ib" data-act="sec-down" data-i="${i}" ${i<t.sections.length-1?'':'disabled'} aria-label="Nach unten">↓</button>${isX?`<button class="ib" data-act="cf-del" data-i="${i}" aria-label="Feld löschen">✕</button>`:''}</span>
       ${isX?`<input class="inp hint" data-tcf="hint" data-key="${esc(cfx.key)}" value="${esc(cfx.hint)}" placeholder="Hinweis für die KI: was soll hier stehen?">`:''}</div>`;}).join('');
   const catRows=cats().map((c,i)=>`<div class="catrow" style="--h:${hueOf(c)}"><i></i><input class="inp" data-catname="${i}" value="${esc(c)}" aria-label="Kategoriename"><span class="mv" style="display:flex;gap:2px"><button class="ib" data-act="cat-up" data-i="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button class="ib" data-act="cat-down" data-i="${i}" ${i<cats().length-1?'':'disabled'} aria-label="Nach unten">↓</button></span><button class="ib" data-act="cat-del" data-i="${i}" ${(counts.get(c)||0)||cats().length<2?'disabled':''} title="${counts.get(c)?'Enthält Rezepte':'Löschen'}" aria-label="Kategorie löschen">✕</button></div>`).join('');
-  return `<div style="margin-bottom:18px"><h1 class="h1">Vorlagen</h1><p class="muted" style="margin:4px 0 0">Die Vorlage bestimmt nur das Aussehen. Die Rezeptdaten bleiben gleich, Änderungen gelten sofort für alle Rezepte mit dieser Vorlage.</p></div>
+  return `<div style="margin-bottom:18px"><h1 class="h1">Vorlagen &amp; Kategorien</h1><p class="muted" style="margin:4px 0 0">Die Vorlage bestimmt nur das Aussehen. Die Rezeptdaten bleiben gleich, Änderungen gelten sofort für alle Rezepte mit dieser Vorlage.</p></div>
   <div class="tv">
     <div style="display:flex;flex-direction:column;gap:14px;min-width:0"><div class="tlist">${listHtml}</div><button class="btn" data-act="tpl-new" ${canWrite?'':'disabled'}>+ Neue Vorlage</button>
+      <label class="btn" for="tplImgIn" style="justify-content:center">Aus Bild oder PDF nachbauen</label>
+      ${S.tplImport?`<p class="${S.tplImport.err?'errline':'muted'}" style="margin:0;font-size:13px">${S.tplImport.busy?'<span class="spin" style="display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:6px"></span>':''}${esc(S.tplImport.msg)}</p>`:''}
       ${!S.templates.length?`<p class="muted" style="font-size:13px;margin:0">Das sind die Standardvorlagen. Sobald du eine speicherst, liegt sie in deiner Kartei.</p>`:''}</div>
     <div class="tform">
       <div class="panel" style="display:flex;flex-direction:column;gap:14px">
@@ -783,6 +799,8 @@ function viewTemplates(){
         <div class="field"><span>Aufteilung</span>${seg('columns',[[1,'Eine Spalte'],[2,'Zwei Spalten']],t.columns)}</div>
         <div class="field"><span>Papier</span>${seg('paper',Object.entries(PAPER).map(([k,p])=>[k,p.label]),t.paper)}</div>
         <div class="field"><span>Schriftgröße</span>${seg('fontScale',[[0.9,'Klein'],[1,'Normal'],[1.1,'Groß']],[0.9,1,1.1].reduce((a,b)=>Math.abs(b-t.fontScale)<Math.abs(a-t.fontScale)?b:a))}</div>
+        <div class="field"><span>Titelschrift</span>${seg('titleFont',Object.entries(TITLE_FONTS),t.titleFont||'')}</div>
+        <div class="field"><span>Papierfarbe</span><div class="swatches">${PAPERS.map(c=>`<button class="sw" style="background:${c||'#FFFFFF'}" data-act="tpl-set" data-k="paperColor" data-v="${c}" aria-pressed="${(t.paperColor||'').toLowerCase()===c.toLowerCase()}" aria-label="${c?'Papier '+c:'Weiß'}"></button>`).join('')}</div></div>
         <div class="field"><span>Akzentfarbe</span><div class="swatches">${SWATCHES.map(c=>`<button class="sw" style="background:${c}" data-act="tpl-set" data-k="accent" data-v="${c}" aria-pressed="${c.toLowerCase()===t.accent.toLowerCase()}" aria-label="Farbe ${c}"></button>`).join('')}<input type="color" id="tplColor" value="${esc(t.accent)}" aria-label="Eigene Farbe" style="width:34px;height:30px;border:0;background:none;padding:0;cursor:pointer"></div></div>
         <div class="row" style="gap:16px"><label class="row" style="gap:6px;font-size:14px"><input type="checkbox" data-t="showCategory" ${t.showCategory?'checked':''}> Kategorie im Kopf</label><label class="row" style="gap:6px;font-size:14px"><input type="checkbox" data-t="showTags" ${t.showTags?'checked':''}> Schlagworte</label></div>
       </div>
@@ -812,7 +830,7 @@ function viewTemplates(){
         <p class="muted" style="margin:0;font-size:12.5px">Umbenennen gilt auch für die Rezepte darin. Kategorien mit Rezepten lassen sich nicht löschen.</p>
       </div>
     </div>
-    <div class="tprev" style="min-width:0"><div class="pv-label"><span>Vorschau mit</span><select class="inp" id="tplPreviewSel" style="width:auto;padding:5px 8px">${pvOpts}</select>${pvRec===DEMO?'<span>(Beispiel)</span>':''}<span class="spacer"></span><span>${usage} Rezept(e) nutzen diese Vorlage</span></div><div id="tplPreview">${previewHtml(pvRec,normTpl(t))}</div></div>
+    <div class="tprev" style="min-width:0">${S.tplRef&&S.tplDraft&&S.tplRef.id===S.tplDraft.id?`<div class="refimg"><button data-act="zoom" data-src="${esc(S.tplRef.url)}"><img src="${esc(S.tplRef.url)}" alt="Vorbild"></button><span>Vorbild. Passe Farben, Schrift und Bereiche links an, bis es dir gefällt, dann „Vorlage speichern“.</span></div>`:''}<div class="pv-label"><span>Vorschau mit</span><select class="inp" id="tplPreviewSel" style="width:auto;padding:5px 8px">${pvOpts}</select>${pvRec===DEMO?'<span>(Beispiel)</span>':''}<span class="spacer"></span><span>${usage} Rezept(e) nutzen diese Vorlage</span></div><div id="tplPreview">${previewHtml(pvRec,normTpl(t))}</div></div>
   </div>`;
 }
 function refreshTplPreview(){const box=$('#tplPreview');if(!box)return;const pv=S.recipes.find(r=>r.id===S.tplPreviewId)||S.recipes[0]||DEMO;box.innerHTML=previewHtml(pv,normTpl(S.tplDraft));mountPreviews();}
@@ -876,6 +894,7 @@ function sampleErr(e){
   const c=e&&e.code;
   if(c==='no_key')return 'Zum Auslesen mit KI brauchst du einen Schlüssel (unter „Einstellungen“, Gemini ist kostenlos). Ohne Schlüssel geht „Text erkennen (ohne KI)“.';
   if(c==='auth')return 'Der Schlüssel wird nicht akzeptiert. Prüfe ihn unter „Einstellungen“.';
+  if(c==='timeout')return 'Gemini hat nicht rechtzeitig geantwortet. Versuch es noch einmal oder wähle unter „Mehr“ ein anderes Modell (z. B. „Gemini Flash Latest“).';
   if(c==='region')return 'Die kostenlose Gemini-Stufe ist an deinem Standort nicht verfügbar. Nutze stattdessen Claude oder die Texterkennung ohne KI.';
   if(c==='credit')return 'Auf deinem API-Konto ist kein Guthaben mehr. Du kannst es unter platform.claude.com aufladen.';
   if(c==='model')return 'Das gewählte Modell ist nicht verfügbar. Wähle unter „Einstellungen“ ein anderes.';
@@ -1072,7 +1091,7 @@ function showFileSheet(filename,blob,title){
 const downloads={save:async({filename,data})=>{showFileSheet(filename,data instanceof Blob?data:new Blob([data]),'Datei ist fertig');return {status:'saved'};}};
 
 /* ---------- Vorlagen speichern ---------- */
-function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,createdAt:n.createdAt||Date.now()};}
+function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,titleFont:n.titleFont,paperColor:n.paperColor,createdAt:n.createdAt||Date.now()};}
 async function saveTpl(){
   const t=S.tplDraft;
   try{
@@ -1088,7 +1107,7 @@ async function saveTpl(){
 }
 async function saveSettings(patch){
   Object.assign(S.settings,patch);
-  try{await db.doc('settings/app').set({categories:S.settings.categories,defaultTemplateId:S.settings.defaultTemplateId||null});}catch(e){toast('Einstellung konnte nicht gespeichert werden.','err');}
+  try{await db.doc('settings/app').set({categories:S.settings.categories,defaultTemplateId:S.settings.defaultTemplateId||null,catsV2:true});}catch(e){toast('Einstellung konnte nicht gespeichert werden.','err');}
 }
 
 /* ---------- Dateien hinzufügen ---------- */
@@ -1250,6 +1269,8 @@ document.addEventListener('click',async ev=>{
   switch(a){
     case 'nav': go(b.dataset.view);break;
     case 'cat': S.cat=b.dataset.cat;render();break;
+    case 'cat-new-go': go('templates');setTimeout(()=>{const i=$('#cat-new');if(i){i.scrollIntoView({block:'center'});i.focus();}},80);break;
+    case 'tpl-new-go': go('templates');setTimeout(()=>{const n=$('[data-act="tpl-new"]');if(n)n.click();},80);break;
     case 'open': go('detail',{openId:b.dataset.id,backTo:S.view==='pantry'?'pantry':'library'});break;
     case 'edit': {const r=S.recipes.find(x=>x.id===S.openId);if(r){S.draft=ensureRecipe(clone(r));go('editor');}break;}
     case 'del-ask': S.confirm='rec';render();break;
@@ -1271,7 +1292,7 @@ document.addEventListener('click',async ev=>{
     case 'sheet-share': if(sheetState&&sheetState.file){try{await navigator.share({files:[sheetState.file],title:sheetState.file.name});}catch(_){}}break;
     case 'sheet-dl': setTimeout(closeSheet,400);break;
     case 'key-save': await saveKey();break;
-    case 'key-del': await saveAi(AI.provider==='claude'?{ckey:'',cmodel:''}:{gkey:'',gmodel:''});AI.models=[];S.aiStatus=null;toast('Schlüssel entfernt.');render();break;
+    case 'key-del': await saveAi(AI.provider==='claude'?{ckey:'',cmodel:''}:{gkey:'',gmodel:'',gchosen:false});AI.models=[];S.aiStatus=null;toast('Schlüssel entfernt.');render();break;
     case 'ai-prov': await saveAi({provider:b.dataset.v});AI.models=[];S.aiStatus=null;render();break;
     case 'key-show': {const i=$('#apiKey');if(i)i.type=i.type==='password'?'text':'password';break;}
     case 'exp': await exportAll(!!($('#expShots')&&$('#expShots').checked));break;
@@ -1287,7 +1308,7 @@ document.addEventListener('click',async ev=>{
     case 'sync-retry': syncStart();break;
     case 'cfg-save': await saveFbConfig();break;
     case 'ex-stop': if(extractCtl)extractCtl.abort();break;
-    case 'manual': S.draft=ensureRecipe({title:'',category:S.upload.cat==='auto'?matchCat('Sonstiges'):S.upload.cat,templateId:S.upload.tplId||defaultTplId(),_new:true});go('editor');break;
+    case 'manual': S.draft=ensureRecipe({title:'',category:S.upload.cat==='auto'?matchCat('Extras'):S.upload.cat,templateId:S.upload.tplId||defaultTplId(),_new:true});go('editor');break;
     case 'f-left': case 'f-right': {const F=S.upload.files,j=a==='f-left'?i-1:i+1;if(F[j]){[F[i],F[j]]=[F[j],F[i]];render();}break;}
     case 'f-del': {const [x]=S.upload.files.splice(i,1);if(x)URL.revokeObjectURL(x.url);render();break;}
     case 'p-add': addPantry($('#pin').value);break;
@@ -1344,7 +1365,8 @@ document.addEventListener('change',async ev=>{
   else if(el.id==='edTpl'&&S.draft){S.draft.templateId=el.value;const y=scrollY;render();scrollTo({top:y});}
   else if(el.id==='u-tpl'){S.upload.tplId=el.value;render();}
   else if(el.id==='u-cat'){S.upload.cat=el.value;}
-  else if(el.id==='modelSel'){await saveAi(AI.provider==='claude'?{cmodel:el.value}:{gmodel:el.value});toast('Modell gespeichert.');}
+  else if(el.id==='modelSel'){await saveAi(AI.provider==='claude'?{cmodel:el.value}:{gmodel:el.value,gchosen:true});toast('Modell gespeichert.');}
+  else if(el.id==='tplImgIn'){const f=el.files[0];el.value='';if(f)await importTplDesign(f);}
   else if(el.id==='impIn'){const f=el.files[0];el.value='';if(f)await importFile(f);}
   else if(el.id==='p-staples'){S.pantry.staples=el.checked;S.pantry.ai=null;savePantry();render();}
   else if(el.id==='u-translate'){S.upload.translate=el.checked;}
@@ -1434,13 +1456,13 @@ assets={
 async function askPersist(force){try{if(!navigator.storage||!navigator.storage.persist)return;if(!force&&S.persistAsked)return;S.persistAsked=true;S.persisted=await navigator.storage.persist();}catch(_){}}
 
 /* ---------- KI über eigenen Schlüssel (Gemini kostenlos oder Claude) ---------- */
-const AI={provider:'gemini',ckey:'',cmodel:'',gkey:'',gmodel:'',key:'',model:'',models:[]};
+const AI={provider:'gemini',ckey:'',cmodel:'',gkey:'',gmodel:'',gchosen:false,key:'',model:'',models:[]};
 const FALLBACK_MODEL='claude-sonnet-4-5';
-const FALLBACK_GEMINI='gemini-2.5-flash';
+const FALLBACK_GEMINI='gemini-flash-latest';
 function aiName(){return AI.provider==='claude'?'Claude':'Gemini';}
 function syncAiActive(){if(AI.provider==='claude'){AI.key=AI.ckey;AI.model=AI.cmodel;}else{AI.key=AI.gkey;AI.model=AI.gmodel;}}
-function loadAiStored(v){v=v||{};if(v.key&&!v.ckey){v.ckey=v.key;v.cmodel=v.model;}AI.ckey=v.ckey||'';AI.cmodel=v.cmodel||'';AI.gkey=v.gkey||'';AI.gmodel=v.gmodel||'';AI.provider=v.provider||(AI.ckey&&!AI.gkey?'claude':'gemini');syncAiActive();}
-async function saveAi(p){Object.assign(AI,p);syncAiActive();await IDB.put('kv',{provider:AI.provider,ckey:AI.ckey,cmodel:AI.cmodel,gkey:AI.gkey,gmodel:AI.gmodel},'ai');}
+function loadAiStored(v){v=v||{};if(v.key&&!v.ckey){v.ckey=v.key;v.cmodel=v.model;}AI.ckey=v.ckey||'';AI.cmodel=v.cmodel||'';AI.gkey=v.gkey||'';AI.gchosen=!!v.gchosen;AI.gmodel=AI.gchosen?(v.gmodel||''):(v.gmodel?FALLBACK_GEMINI:'');AI.provider=v.provider||(AI.ckey&&!AI.gkey?'claude':'gemini');syncAiActive();}
+async function saveAi(p){Object.assign(AI,p);syncAiActive();await IDB.put('kv',{provider:AI.provider,ckey:AI.ckey,cmodel:AI.cmodel,gkey:AI.gkey,gmodel:AI.gmodel,gchosen:AI.gchosen},'ai');}
 function apiHeaders(key){return {'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};}
 function blobToB64(b){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]);fr.onerror=()=>rej(fr.error);fr.readAsDataURL(b);});}
 function parseLoose(t){
@@ -1489,65 +1511,75 @@ function geminiErr(status,msg){
   if(status===413)return {code:'prompt_too_large',message:msg};
   return {code:'upstream_error',message:msg};
 }
-async function geminiText(prompt,{images=[],signal,onText,maxTokens=16000}={}){
+async function geminiText(prompt,{images=[],signal,onText,maxTokens=16000,json=false}={}){
   if(!AI.gkey)throw {code:'no_key'};
   const parts=[];
   for(const b of images){const type=['image/jpeg','image/png','image/webp'].includes(b.type)?b.type:'image/jpeg';parts.push({inline_data:{mime_type:type,data:await blobToB64(b)}});}
   parts.push({text:prompt});
   const model=(AI.gmodel||FALLBACK_GEMINI).replace(/^models\//,'');
-  let res;
-  try{res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,{method:'POST',signal,headers:{'content-type':'application/json','x-goog-api-key':AI.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:maxTokens,temperature:0.2}})});}
-  catch(e){if(e&&e.name==='AbortError')throw {code:'cancelled'};throw {code:'offline'};}
-  if(!res.ok){let msg='';try{const j=await res.json();msg=(j.error&&j.error.message)||'';}catch(_){}throw geminiErr(res.status,msg);}
-  const reader=res.body.getReader();const dec=new TextDecoder();let buf='',text='',stop='';
+  const gc={maxOutputTokens:maxTokens,temperature:0.2};if(json)gc.responseMimeType='application/json';
+  const ctl=new AbortController();let timedOut=false;
+  const tm=setTimeout(()=>{timedOut=true;ctl.abort();},120000);
+  if(signal){if(signal.aborted)ctl.abort();else signal.addEventListener('abort',()=>ctl.abort(),{once:true});}
+  let j;
   try{
-    for(;;){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
-      while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;
-        let ev;try{ev=JSON.parse(line.slice(5).trim());}catch(_){continue;}
-        if(ev.error)throw geminiErr(ev.error.code||500,ev.error.message||'');
-        if(ev.promptFeedback&&ev.promptFeedback.blockReason)throw {code:'refused'};
-        const c=ev.candidates&&ev.candidates[0];if(!c)continue;
-        for(const p of (c.content&&c.content.parts)||[])if(p.text&&!p.thought){text+=p.text;if(onText)try{onText({text,delta:p.text});}catch(_){}}
-        if(c.finishReason)stop=c.finishReason;}}
-  }catch(e){if(e&&e.code)throw e;if(e&&e.name==='AbortError')throw {code:'cancelled',text};throw {code:'upstream_error',text};}
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',signal:ctl.signal,headers:{'content-type':'application/json','x-goog-api-key':AI.gkey},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:gc})});
+    if(!res.ok){let msg='';try{const e=await res.json();msg=(e.error&&e.error.message)||'';}catch(_){}throw geminiErr(res.status,msg);}
+    j=await res.json();
+  }catch(e){if(e&&e.code)throw e;if(e&&e.name==='AbortError')throw {code:timedOut?'timeout':'cancelled'};throw {code:'offline'};}
+  finally{clearTimeout(tm);}
+  if(j.promptFeedback&&j.promptFeedback.blockReason)throw {code:'refused'};
+  const c=j.candidates&&j.candidates[0];
+  const text=((c&&c.content&&c.content.parts)||[]).filter(p=>p.text&&!p.thought).map(p=>p.text).join('');
+  const stop=(c&&c.finishReason)||'';
   if(stop==='SAFETY'||stop==='PROHIBITED_CONTENT')throw {code:'refused'};
-  if(!text.trim())throw {code:'empty_completion'};
+  if(!text.trim())throw {code:stop==='MAX_TOKENS'?'invalid_json':'empty_completion'};
+  if(onText)try{onText({text,delta:text});}catch(_){}
   return {text,truncated:stop==='MAX_TOKENS'};
 }
 function aiText(p,o){return AI.provider==='claude'?claudeText(p,o):geminiText(p,o);}
 sample=Object.assign((p,o={})=>aiText(p,o),{
-  json:async(p,o={})=>{const r=await aiText(p,o);if(r.truncated)throw {code:'invalid_json',text:r.text};return parseLoose(r.text);},
+  json:async(p,o={})=>{const r=await aiText(p,{...o,json:true});if(r.truncated)throw {code:'invalid_json',text:r.text};return parseLoose(r.text);},
   limits:async()=>({maxPromptBytes:262144,images:{maxCount:20}})
 });
 imgLimits={maxCount:20};
-async function loadModels(provider,key){
+async function loadModels(provider,key,signal){
   if(provider==='claude'){
-    const res=await fetch('https://api.anthropic.com/v1/models?limit=100',{headers:apiHeaders(key)}).catch(()=>{throw {code:'offline'};});
+    const res=await fetch('https://api.anthropic.com/v1/models?limit=100',{headers:apiHeaders(key),signal}).catch(e=>{throw {code:e&&e.name==='AbortError'?'timeout':'offline'};});
     if(!res.ok){let msg='';try{msg=((await res.json()).error||{}).message||'';}catch(_){}throw httpErr(res.status,msg);}
     const j=await res.json();return (j.data||[]).map(m=>({id:m.id,name:m.display_name||m.id}));
   }
-  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}}).catch(()=>{throw {code:'offline'};});
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key},signal}).catch(e=>{throw {code:e&&e.name==='AbortError'?'timeout':'offline'};});
   if(!res.ok){let msg='';try{msg=((await res.json()).error||{}).message||'';}catch(_){}throw geminiErr(res.status,msg);}
   const j=await res.json();
   const ver=n=>parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/)||[])[1]||0);
   return (j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/^models\/gemini-/.test(m.name)&&!/(embedding|tts|image|live|audio|learnlm|aqa|exp|thinking|robotics|computer|nano)/i.test(m.name))
     .map(m=>({id:m.name.replace(/^models\//,''),name:m.displayName||m.name.replace(/^models\//,''),v:ver(m.name),pre:/preview/i.test(m.name),lite:/lite/i.test(m.name),flash:/flash/i.test(m.name)}))
-    .sort((a,b)=>(b.flash-a.flash)||(a.pre-b.pre)||(a.lite-b.lite)||(b.v-a.v)||coll.compare(a.id,b.id));
+    .sort((a,b)=>((b.id===FALLBACK_GEMINI)-(a.id===FALLBACK_GEMINI))||(b.flash-a.flash)||(a.pre-b.pre)||(a.lite-b.lite)||(a.v-b.v)||coll.compare(a.id,b.id));
 }
 async function saveKey(){
-  const inp=$('#apiKey');const key=(inp&&inp.value||'').trim();const prov=AI.provider;
+  const inp=$('#apiKey');const key=(inp&&inp.value||'').trim().replace(/\s+/g,'');const prov=AI.provider;
   if(!key){toast('Bitte zuerst den Schlüssel einfügen.','err');return;}
-  S.aiStatus={busy:true};render();
+  S.aiStatus={busy:true,step:'Schlüssel wird geprüft …'};render();
+  const detail=e=>{const m=e&&e.message?String(e.message).slice(0,160):'';return sampleErr(e)+(m?' ('+m+')':'');};
+  let ctl=new AbortController();let tm=setTimeout(()=>ctl.abort(),20000);
   try{
-    const models=await loadModels(prov,key);AI.models=models;
+    const models=await loadModels(prov,key,ctl.signal);clearTimeout(tm);AI.models=models;
     const cur=prov==='claude'?AI.cmodel:AI.gmodel;
-    const keep=models.find(m=>m.id===cur);
+    const keep=(prov==='claude'||AI.gchosen)?models.find(m=>m.id===cur):null;
     const pick=keep||(prov==='claude'?(models.find(m=>/sonnet/i.test(m.id))||models[0]):models[0]);
     const id=pick?pick.id:(prov==='claude'?FALLBACK_MODEL:FALLBACK_GEMINI);
     await saveAi(prov==='claude'?{ckey:key,cmodel:id}:{gkey:key,gmodel:id});
-    if(prov==='gemini'){try{await geminiText('Antworte nur mit dem Wort OK.',{maxTokens:400});}catch(e){if(e&&e.code!=='empty_completion')throw e;}}
-    S.aiStatus={ok:true};toast('Schlüssel gespeichert und geprüft.');
-  }catch(e){S.aiStatus={err:sampleErr(e)};}
+  }catch(e){clearTimeout(tm);S.aiStatus={err:e&&e.code==='timeout'?'Keine Antwort vom Server. Prüfe die Internetverbindung und versuch es noch einmal.':detail(e)};render();return;}
+  if(prov==='gemini'){
+    S.aiStatus={busy:true,step:'Testanfrage an Gemini …'};render();
+    ctl=new AbortController();tm=setTimeout(()=>ctl.abort(),40000);
+    try{await geminiText('Antworte nur mit dem Wort OK.',{maxTokens:2000,signal:ctl.signal});clearTimeout(tm);S.aiStatus={ok:true};toast('Schlüssel gespeichert und geprüft.');}
+    catch(e){clearTimeout(tm);
+      if(e&&(e.code==='cancelled'))S.aiStatus={ok:true,note:'Schlüssel gespeichert. Die Testanfrage hat sehr lange gedauert, probier einfach ein Rezept aus.'};
+      else if(e&&e.code==='empty_completion')S.aiStatus={ok:true};
+      else S.aiStatus={err:detail(e)};}
+  }else{S.aiStatus={ok:true};toast('Schlüssel gespeichert und geprüft.');}
   render();
 }
 
@@ -1567,7 +1599,7 @@ function textToRecipe(text,t,U){
   const serv=(all.match(/\d+\s*(Portionen|Personen|Stück|Stk\.?)/i)||[])[0]||'';
   const time=(all.match(/\d+\s*(Min\.?|Minuten|Std\.?|Stunden)\b/i)||[])[0]||'';
   const title=(head.find(l=>l.length>3&&!/^[\d:.,%]/.test(l)&&!/[|@#]/.test(l)&&/[a-zäöü]/i.test(l))||'Neues Rezept').slice(0,90);
-  return ensureRecipe({title,category:U.cat==='auto'?matchCat('Sonstiges'):U.cat,intro:'',servings:serv,prepTime:'',cookTime:'',totalTime:time,difficulty:'',ingredients:ig,steps:st,tips:tips.join('\n'),nutrition:{},source:'',tags:[],extra:{},templateId:t.id});
+  return ensureRecipe({title,category:U.cat==='auto'?matchCat('Extras'):U.cat,intro:'',servings:serv,prepTime:'',cookTime:'',totalTime:time,difficulty:'',ingredients:ig,steps:st,tips:tips.join('\n'),nutrition:{},source:'',tags:[],extra:{},templateId:t.id});
 }
 async function runOcr(){
   const U=S.upload;
@@ -1631,7 +1663,7 @@ function backupNote(){
   if(days!==null&&days<30)return '';
   return `<div class="confirm" style="background:var(--accent-soft)"><span><b>${days===null?'Du hast deine Rezepte noch nie gesichert.':`Deine letzte Sicherung ist ${days} Tage her.`}</b> Die Rezepte liegen nur auf diesem Gerät.</span><span class="spacer"></span><button class="btn sm ghost" data-act="backup-later">Später</button><button class="btn sm primary" data-act="nav" data-view="settings">Jetzt sichern</button></div>`;
 }
-const EXAMPLES=[{"id": "bsp-bananenbrot", "title": "Bananenbrot", "category": "Gebackenes", "intro": "Saftiges Rührbrot aus sehr reifen Bananen.", "servings": "1 Kastenform (26 cm)", "prepTime": "15 Min.", "cookTime": "55 Min.", "totalTime": "70 Min.", "difficulty": "leicht", "ingredients": ["3 reife Bananen", "80 g Butter, geschmolzen", "100 g brauner Zucker", "2 Eier", "1 TL Vanilleextrakt", "250 g Weizenmehl (Type 405)", "1 TL Natron", "1 Prise Salz", "Optional:", "50 g gehackte Walnüsse"], "steps": ["Backofen auf 175 °C Ober-/Unterhitze vorheizen und die Kastenform fetten.", "Bananen mit einer Gabel fein zerdrücken, Butter, Zucker, Eier und Vanille unterrühren.", "Mehl, Natron und Salz mischen und kurz unter die Bananenmasse heben. Nach Wunsch Walnüsse unterziehen.", "Teig in die Form füllen und 50–55 Minuten backen (Stäbchenprobe).", "Zehn Minuten in der Form abkühlen lassen, dann auf ein Gitter stürzen."], "tips": "Je brauner die Bananen, desto süßer und saftiger wird das Brot.", "nutrition": {"kcal": "", "protein": "", "carbs": "", "fat": ""}, "source": "Beispielrezept", "tags": ["vegetarisch", "Kuchen"], "extra": {"allergene": "Gluten, Ei, Milch, ggf. Nüsse"}, "templateId": "modern", "photoId": null, "screenshotIds": [], "example": true, "createdAt": 1760400000000, "updatedAt": 1760400000000}, {"id": "bsp-overnight-oats", "title": "Overnight Oats mit Beeren", "category": "Frühstück", "intro": "", "servings": "1 Portion", "prepTime": "5 Min.", "cookTime": "", "totalTime": "5 Min. + über Nacht", "difficulty": "leicht", "ingredients": ["50 g zarte Haferflocken", "100 ml Milch oder Haferdrink", "100 g Naturjoghurt", "1 TL Chiasamen", "1 TL Honig", "80 g gemischte Beeren"], "steps": ["Haferflocken, Milch, Joghurt, Chiasamen und Honig in einem Glas verrühren.", "Abgedeckt über Nacht im Kühlschrank quellen lassen.", "Morgens durchrühren und mit den Beeren belegen."], "tips": "Hält sich verschlossen zwei Tage im Kühlschrank.", "nutrition": {"kcal": "390", "protein": "15 g", "carbs": "52 g", "fat": "11 g"}, "source": "Beispielrezept", "tags": ["vegetarisch", "schnell"], "extra": {}, "templateId": "klassisch", "photoId": null, "screenshotIds": [], "example": true, "createdAt": 1760400001000, "updatedAt": 1760400001000}, {"id": "bsp-ingwer-limonade", "title": "Ingwer-Zitronen-Limonade", "category": "Getränke", "intro": "", "servings": "1 Liter", "prepTime": "10 Min.", "cookTime": "", "totalTime": "40 Min.", "difficulty": "leicht", "ingredients": ["30 g frischer Ingwer", "2 Bio-Zitronen", "3 EL Honig", "1 l Mineralwasser, gekühlt", "Zum Servieren:", "Eiswürfel", "Minze"], "steps": ["Ingwer schälen und in feine Scheiben schneiden, Zitronen auspressen.", "Ingwer mit 200 ml heißem Wasser übergießen und 10 Minuten ziehen lassen.", "Honig im warmen Ingwersud auflösen, Zitronensaft zugeben und abkühlen lassen.", "Mit dem kalten Mineralwasser auffüllen und mit Eis und Minze servieren."], "tips": "", "nutrition": {"kcal": "", "protein": "", "carbs": "", "fat": ""}, "source": "Beispielrezept", "tags": ["alkoholfrei"], "extra": {}, "templateId": "karteikarte", "photoId": null, "screenshotIds": [], "example": true, "createdAt": 1760400002000, "updatedAt": 1760400002000}];
+const EXAMPLES=[{"id": "bsp-bananenbrot", "title": "Bananenbrot", "category": "Kuchen und Gebäck", "intro": "Saftiges Rührbrot aus sehr reifen Bananen.", "servings": "1 Kastenform (26 cm)", "prepTime": "15 Min.", "cookTime": "55 Min.", "totalTime": "70 Min.", "difficulty": "leicht", "ingredients": ["3 reife Bananen", "80 g Butter, geschmolzen", "100 g brauner Zucker", "2 Eier", "1 TL Vanilleextrakt", "250 g Weizenmehl (Type 405)", "1 TL Natron", "1 Prise Salz", "Optional:", "50 g gehackte Walnüsse"], "steps": ["Backofen auf 175 °C Ober-/Unterhitze vorheizen und die Kastenform fetten.", "Bananen mit einer Gabel fein zerdrücken, Butter, Zucker, Eier und Vanille unterrühren.", "Mehl, Natron und Salz mischen und kurz unter die Bananenmasse heben. Nach Wunsch Walnüsse unterziehen.", "Teig in die Form füllen und 50–55 Minuten backen (Stäbchenprobe).", "Zehn Minuten in der Form abkühlen lassen, dann auf ein Gitter stürzen."], "tips": "Je brauner die Bananen, desto süßer und saftiger wird das Brot.", "nutrition": {"kcal": "", "protein": "", "carbs": "", "fat": ""}, "source": "Beispielrezept", "tags": ["vegetarisch", "Kuchen"], "extra": {"allergene": "Gluten, Ei, Milch, ggf. Nüsse"}, "templateId": "modern", "photoId": null, "screenshotIds": [], "example": true, "createdAt": 1760400000000, "updatedAt": 1760400000000}, {"id": "bsp-overnight-oats", "title": "Overnight Oats mit Beeren", "category": "Frühstück", "intro": "", "servings": "1 Portion", "prepTime": "5 Min.", "cookTime": "", "totalTime": "5 Min. + über Nacht", "difficulty": "leicht", "ingredients": ["50 g zarte Haferflocken", "100 ml Milch oder Haferdrink", "100 g Naturjoghurt", "1 TL Chiasamen", "1 TL Honig", "80 g gemischte Beeren"], "steps": ["Haferflocken, Milch, Joghurt, Chiasamen und Honig in einem Glas verrühren.", "Abgedeckt über Nacht im Kühlschrank quellen lassen.", "Morgens durchrühren und mit den Beeren belegen."], "tips": "Hält sich verschlossen zwei Tage im Kühlschrank.", "nutrition": {"kcal": "390", "protein": "15 g", "carbs": "52 g", "fat": "11 g"}, "source": "Beispielrezept", "tags": ["vegetarisch", "schnell"], "extra": {}, "templateId": "klassisch", "photoId": null, "screenshotIds": [], "example": true, "createdAt": 1760400001000, "updatedAt": 1760400001000}, {"id": "bsp-ingwer-limonade", "title": "Ingwer-Zitronen-Limonade", "category": "Getränke", "intro": "", "servings": "1 Liter", "prepTime": "10 Min.", "cookTime": "", "totalTime": "40 Min.", "difficulty": "leicht", "ingredients": ["30 g frischer Ingwer", "2 Bio-Zitronen", "3 EL Honig", "1 l Mineralwasser, gekühlt", "Zum Servieren:", "Eiswürfel", "Minze"], "steps": ["Ingwer schälen und in feine Scheiben schneiden, Zitronen auspressen.", "Ingwer mit 200 ml heißem Wasser übergießen und 10 Minuten ziehen lassen.", "Honig im warmen Ingwersud auflösen, Zitronensaft zugeben und abkühlen lassen.", "Mit dem kalten Mineralwasser auffüllen und mit Eis und Minze servieren."], "tips": "", "nutrition": {"kcal": "", "protein": "", "carbs": "", "fat": ""}, "source": "Beispielrezept", "tags": ["alkoholfrei"], "extra": {}, "templateId": "karteikarte", "photoId": null, "screenshotIds": [], "example": true, "createdAt": 1760400002000, "updatedAt": 1760400002000}];
 async function addExamples(){for(const e of EXAMPLES){const v=clone(e);await IDB.put('recipes',v);Store.recipes.set(v.id,v);syncPush('recipes',v.id,v);}notify('recipes');toast('Beispielrezepte hinzugefügt.');render();}
 
 /* ---------- Synchronisierung über Firebase ---------- */
@@ -1825,10 +1857,10 @@ function viewSettings(){
       ${AI.provider==='gemini'
         ?`<p style="margin:0;font-size:14px">Kostenloser Schlüssel von Google, ohne Kreditkarte: Auf <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> mit deinem Google-Konto anmelden → <b>„API-Schlüssel erstellen“</b> → kopieren und hier einfügen.</p><p class="muted" style="margin:0;font-size:12.5px">Die kostenlose Stufe hat Tages- und Minutenlimits, für ein Rezeptbuch reicht das gut. Google kann Eingaben aus der kostenlosen Stufe zur Verbesserung seiner Dienste verwenden. Lade also nur Rezept-Screenshots hoch, nichts Privates.</p>`
         :`<p style="margin:0;font-size:14px">Schlüssel auf <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a> erstellen (Guthaben aufladen, Monatslimit setzen, „API Keys“). Abgerechnet wird nach Nutzung, grob ein paar Cent pro Rezept.</p>`}
-      <label class="field"><span>${AI.provider==='gemini'?'Gemini-Schlüssel':'Claude-Schlüssel'}</span><div class="row" style="flex-wrap:nowrap"><input class="inp" id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="${AI.provider==='gemini'?'AIza…':'sk-ant-…'}" value="${esc(AI.key)}"><button class="btn sm ghost" data-act="key-show" aria-label="Schlüssel anzeigen">Zeigen</button></div></label>
-      <div class="row"><button class="btn primary" data-act="key-save" ${st.busy?'disabled':''}>${st.busy?'Wird geprüft …':'Speichern & prüfen'}</button>${AI.key?'<button class="btn ghost danger" data-act="key-del">Entfernen</button>':''}</div>
-      ${st.ok?'<p class="okline" style="margin:0">Schlüssel funktioniert.</p>':st.err?`<p class="errline" style="margin:0">${esc(st.err)}</p>`:''}
-      ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>${AI.provider==='gemini'?'Flash ist schnell und im kostenlosen Kontingent enthalten.':'Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.'}</small></label>`:''}
+      <label class="field"><span>${AI.provider==='gemini'?'Gemini-Schlüssel':'Claude-Schlüssel'}</span><div class="row" style="flex-wrap:nowrap"><input class="inp" id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="${AI.provider==='gemini'?'AQ.… oder AIza…':'sk-ant-…'}" value="${esc(AI.key)}"><button class="btn sm ghost" data-act="key-show" aria-label="Schlüssel anzeigen">Zeigen</button></div></label>
+      <div class="row"><button class="btn primary" data-act="key-save" ${st.busy?'disabled':''}>${st.busy?esc(st.step||'Wird geprüft …'):'Speichern & prüfen'}</button>${AI.key?'<button class="btn ghost danger" data-act="key-del">Entfernen</button>':''}</div>
+      ${st.ok?`<p class="okline" style="margin:0">${st.note?esc(st.note):'Schlüssel funktioniert.'}</p>`:st.err?`<p class="errline" style="margin:0">${esc(st.err)}</p>`:''}
+      ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>${AI.provider==='gemini'?'Empfohlen: „Gemini Flash Latest“. Neuere Vorschau-Modelle sind im kostenlosen Kontingent oft langsam oder gesperrt.':'Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.'}</small></label>`:''}
       <p class="muted" style="margin:0;font-size:12.5px">Der Schlüssel wird nur auf diesem Gerät gespeichert. Trag ihn auf jedem Gerät ein, auf dem du Screenshots auslesen willst.</p>
     </section>
     <section class="panel">
@@ -1846,6 +1878,94 @@ function viewSettings(){
       ${ex?'':'<div class="row"><button class="btn ghost" data-act="ex-add">Beispielrezepte hinzufügen</button></div>'}
     </section>
   </div>`;
+}
+
+/* ---------- Vorlage aus Bild/PDF nachbauen ---------- */
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+async function pdfToBlob(file){
+  await loadScript(PDFJS+'pdf.min.js');
+  const lib=window.pdfjsLib;if(!lib)throw new Error('pdf');
+  try{lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';}catch(_){}
+  const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const page=await doc.getPage(1);const v1=page.getViewport({scale:1});
+  const scale=Math.min(3,1500/Math.max(v1.width,v1.height));const vp=page.getViewport({scale});
+  const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:x,viewport:vp}).promise;
+  return canvasBlob(c,'image/jpeg',.9);
+}
+async function fitImage(blob,max=1500){
+  const u=URL.createObjectURL(blob);try{const img=await loadImg(u);const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    return {blob:await canvasBlob(c,'image/jpeg',.9),w:c.width,h:c.height};}finally{URL.revokeObjectURL(u);}
+}
+function lum(hex){const n=parseInt(hex.slice(1),16);const r=n>>16&255,g=n>>8&255,b=n&255;return (0.2126*r+0.7152*g+0.0722*b)/255;}
+async function importTplDesign(file){
+  if(!AI.key){S.tplImport={err:true,msg:'Zum Nachbauen braucht die App einen KI-Schlüssel (Gemini ist kostenlos). Trag ihn unter „Mehr“ ein.'};render();return;}
+  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
+  S.tplImport={busy:true,msg:isPdf?'PDF wird geöffnet …':'Bild wird vorbereitet …'};render();
+  let img;
+  try{const src=isPdf?await pdfToBlob(file):file;img=await fitImage(src);}
+  catch(e){S.tplImport={err:true,msg:isPdf?'Die PDF konnte nicht geöffnet werden. Beim ersten Mal braucht das Internet.':'Das Bild konnte nicht gelesen werden. Verwende PNG, JPG oder WebP.'};render();return;}
+  S.tplImport={busy:true,msg:aiName()+' schaut sich das Design an … (meist 10–40 Sekunden)'};render();
+  const prompt=`Du siehst die Gestaltung einer Rezeptkarte bzw. Rezeptseite (Screenshot von Pinterest oder eine PDF-Vorlage). Baue das Design so gut wie möglich mit den folgenden Bausteinen nach.
+Antworte NUR mit JSON in genau dieser Form:
+{"name":"","style":"","columns":1,"paper":"A5","accent":"#RRGGBB","paperColor":"","titleFont":"","fontScale":1,"showCategory":true,"showTags":false,"sections":[{"key":"","label":"","on":true,"col":"a"}],"customFields":[{"label":"","hint":""}]}
+
+- name: kurzer, hübscher Name für die Vorlage (2–3 Wörter, deutsch).
+- style: der ähnlichste Grundstil:
+  blush = verspielt, farbiger geschwungener Kopfbereich, Titel in Schreibschrift, Zutaten mit Punkten, Tipp in Handschrift
+  bogen = elegant, getöntes Papier, Foto in Bogenform, Titel in kursiver Serifenschrift, feine Linien
+  pastell = Karte mit Klebestreifen-Optik, Kreise zum Abhaken, Überschriften in Pillen
+  modern = klar und sachlich, Großbuchstaben-Überschriften mit Linie
+  klassisch = Kochbuch-Look, Serifenschrift, zentrierte Überschriften mit Linien
+  karte = Karteikarte mit Linien und Schreibmaschinenschrift
+- columns: 2, wenn Zutaten und Zubereitung nebeneinander stehen, sonst 1.
+- paper: "A5q" bei Querformat, sonst "A5".
+- accent: die prägende Akzentfarbe (Überschriften, Linien, Deko) als Hex-Wert.
+- paperColor: Hintergrundfarbe des Papiers als Hex-Wert, nur wenn deutlich nicht weiß, sonst "".
+- titleFont: "script" (Schreibschrift), "serif" (Serif kursiv), "sans" (schlicht modern), "slab" (Slab/Schreibmaschine), "hand" (Handschrift) oder "" wenn der Grundstil passt.
+- fontScale: 0.9 bei viel kleinem Text, 1.1 bei großer Schrift, sonst 1.
+- sections: ALLE diese Bereiche genau einmal, in der Reihenfolge wie im Vorbild von oben nach unten (bei zwei Spalten erst die linke, dann die rechte): photo (Foto), intro (Beschreibung), meta (Portionen/Zeiten/Schwierigkeit), ingredients (Zutaten), steps (Zubereitung), nutrition (Nährwerte), tips (Tipps), notes (leere Linien für Notizen), source (Quelle). on=false für Bereiche, die das Vorbild nicht hat. col: "a" = linke Spalte, "b" = rechte Spalte (bei einer Spalte egal). label: die Überschrift wie im Vorbild, auf Deutsch (z. B. "Das brauchst du", "So geht's").
+- customFields: Felder des Vorbilds, die es oben nicht gibt (z. B. "Weinempfehlung", "Für wen", "Haltbarkeit", "Mein Fazit"), jeweils mit kurzem Hinweis, was dort stehen soll. Leere Liste, wenn es keine gibt.`;
+  try{
+    const o=await sample.json(prompt,{images:[img.blob]});
+    const base=clone(PRESETS[0]);
+    const t={id:newId(),name:str(o.name)||'Neue Vorlage',style:STYLES[o.style]?o.style:'blush',columns:+o.columns===2?2:1,
+      paper:o.paper==='A5q'||img.w>img.h*1.15?'A5q':(o.paper==='A4'?'A4':'A5'),
+      accent:/^#[0-9a-f]{6}$/i.test(o.accent||'')?o.accent:base.accent,
+      paperColor:/^#[0-9a-f]{6}$/i.test(o.paperColor||'')&&lum(o.paperColor)>0.86&&lum(o.paperColor)<0.995?o.paperColor:'',
+      titleFont:TITLE_FONTS[o.titleFont]?o.titleFont:'',fontScale:[0.9,1,1.1].reduce((a,b)=>Math.abs(b-(+o.fontScale||1))<Math.abs(a-(+o.fontScale||1))?b:a),
+      showCategory:o.showCategory!==false,showTags:!!o.showTags,customFields:[],sections:[],createdAt:Date.now()};
+    const seen=new Set();
+    for(const x of Array.isArray(o.sections)?o.sections:[]){const b=BASE_SECTIONS.find(y=>y.key===x.key);if(!b||seen.has(b.key))continue;seen.add(b.key);t.sections.push({key:b.key,label:str(x.label)||b.label,on:x.on!==false,col:x.col==='a'?'a':'b'});}
+    for(const f of Array.isArray(o.customFields)?o.customFields:[]){const label=str(f&&f.label);if(!label)continue;let key=slug(label),n=2;const k0=key;while(t.customFields.some(c=>c.key===key)||BASE_SECTIONS.some(y=>y.key===key))key=k0+'-'+(n++);
+      t.customFields.push({key,label,hint:str(f.hint)});t.sections.push({key:'x:'+key,label,on:true,col:t.columns===2?'a':'b'});}
+    S.tplDraft=normTpl(t);S.tplDraft._unsaved=true;S.tplDirty=true;S.tplEditId=t.id;
+    if(S.tplRef&&S.tplRef.url)URL.revokeObjectURL(S.tplRef.url);
+    S.tplRef={id:t.id,url:URL.createObjectURL(img.blob)};
+    S.tplImport={msg:'Fertig. Vergleiche rechts mit dem Vorbild und speichere die Vorlage.'};render();
+  }catch(e){S.tplImport={err:true,msg:sampleErr(e)};render();}
+}
+
+/* ---------- Kategorien umstellen (einmalig) ---------- */
+let catMigRun=false,catMigAgain=false;
+async function migrateCats(){
+  if(!db||!S.loaded)return;
+  if(catMigRun){catMigAgain=true;return;}
+  catMigRun=true;
+  try{
+    const st=Store.settings||{};
+    if(!st.catsV2){
+      const list=DEFAULT_CATS.slice();
+      for(const c of (Array.isArray(st.categories)?st.categories:[])){const m=OLD2NEW[c]||c;if(!list.includes(m))list.push(m);}
+      await db.doc('settings/app').set({categories:list,defaultTemplateId:st.defaultTemplateId||null,catsV2:true});
+    }
+    const cs=cats();
+    for(const r of S.recipes.slice()){const m=OLD2NEW[r.category];if(m&&!cs.includes(r.category)&&cs.includes(m)){try{await db.collection('recipes').doc(r.id).update({category:m});}catch(_){}}}
+  }catch(e){console.warn(e);}
+  finally{catMigRun=false;if(catMigAgain){catMigAgain=false;setTimeout(migrateCats,50);}}
 }
 
 /* ---------- Start ---------- */
@@ -1868,7 +1988,7 @@ render();
   }catch(e){S.noDb=true;render();return;}
   let got={r:false,t:false};
   const ready=()=>{if(got.r&&got.t)S.loaded=true;};
-  const onData=()=>{ready();if(['library','detail','upload','settings'].includes(S.view)||(S.view==='pantry'&&document.activeElement?.id!=='pin'))render();else if(S.view==='templates'&&!S.tplDirty)render();};
+  const onData=()=>{ready();setTimeout(migrateCats,0);if(['library','detail','upload','settings'].includes(S.view)||(S.view==='pantry'&&document.activeElement?.id!=='pin'))render();else if(S.view==='templates'&&!S.tplDirty)render();};
   db.collection('recipes').onSnapshot(s=>{S.recipes=s.docs.map(d=>ensureRecipe({id:d.id,...clone(d.data())}));got.r=true;onData();});
   db.collection('templates').onSnapshot(s=>{S.templates=s.docs.map(d=>({id:d.id,...clone(d.data())}));got.t=true;onData();});
   db.doc('settings/app').onSnapshot(s=>{const v=s.exists?s.data():{};S.settings={categories:Array.isArray(v.categories)&&v.categories.length?v.categories.slice():DEFAULT_CATS.slice(),defaultTemplateId:v.defaultTemplateId||null};onData();});

@@ -275,6 +275,17 @@ main a{color:var(--accent)}
 .refimg button{border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;cursor:zoom-in;background:var(--surface)}
 .refimg img{display:block;height:84px;width:auto}
 
+/* Bewertung */
+.sh-rating .stars{display:flex;gap:.35em}
+.sh-rating .stars svg{width:2.4em;height:2.4em;display:block}
+.st-blush.one .sh-rating,.st-klassisch.one .sh-rating{text-align:center}
+.st-blush.one .sh-rating .stars,.st-klassisch.one .sh-rating .stars{justify-content:center}
+.st-blush.one .sh-rating .sh-h::after{margin-left:auto;margin-right:auto}
+.rate{display:inline-flex;gap:2px;align-items:center}
+.rate button{border:0;background:none;padding:2px;cursor:pointer;color:var(--accent);font-size:22px;line-height:1}
+.rate button[aria-pressed="false"]{color:var(--line)}
+.card-s{color:var(--accent);font-size:12px;letter-spacing:1px}
+
 /* Meldungen */
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
 #toast.err{background:var(--danger);color:var(--surface)}
@@ -476,9 +487,9 @@ const PAPERS=['','#FFF9F2','#FFF3F5','#F2F8F3','#F6F2FB','#F9F5EC','#F1F6FA'];
 const BASE_SECTIONS=[
   {key:'photo',label:'Foto',col:'b'},{key:'intro',label:'Beschreibung',col:'b'},{key:'meta',label:'Eckdaten',col:'a'},
   {key:'ingredients',label:'Zutaten',col:'a'},{key:'steps',label:'Zubereitung',col:'b'},{key:'nutrition',label:'Nährwerte pro Portion',col:'a'},
-  {key:'tips',label:'Tipps',col:'b'},{key:'notes',label:'Eigene Notizen',col:'b'},{key:'source',label:'Quelle',col:'b'}
+  {key:'tips',label:'Tipps',col:'b'},{key:'notes',label:'Eigene Notizen',col:'b'},{key:'source',label:'Quelle',col:'b'},{key:'rating',label:'Bewertung',col:'a'}
 ];
-const SEC_HELP={photo:'Foto des Gerichts',intro:'Kurzbeschreibung',meta:'Portionen, Zeiten, Schwierigkeit',ingredients:'Zutatenliste',steps:'Arbeitsschritte',nutrition:'kcal, Eiweiß, KH, Fett',tips:'Tipps & Varianten',notes:'Leere Linien zum Reinschreiben',source:'Herkunft des Rezepts'};
+const SEC_HELP={rating:'5 Sterne zum Ausmalen bzw. deine Bewertung',photo:'Foto des Gerichts',intro:'Kurzbeschreibung',meta:'Portionen, Zeiten, Schwierigkeit',ingredients:'Zutatenliste',steps:'Arbeitsschritte',nutrition:'kcal, Eiweiß, KH, Fett',tips:'Tipps & Varianten',notes:'Leere Linien zum Reinschreiben',source:'Herkunft des Rezepts'};
 const SWATCHES=['#D46A8C','#E3909F','#B5739D','#9A7FC6','#6F9A7E','#D9906A','#C3A04E','#6B4A5A'];
 const sec=(key,on,col,label)=>({key,on,col,label:label||BASE_SECTIONS.find(b=>b.key===key).label});
 const PRESETS=[
@@ -532,7 +543,7 @@ function normTpl(t){
     sections:Array.isArray(t.sections)?t.sections.filter(s=>s&&s.key).map(s=>({key:s.key,label:s.label||'',on:s.on!==false,col:s.col==='a'?'a':'b'})):[],
     createdAt:t.createdAt||0,_virtual:!!t._virtual,titleFont:TITLE_FONTS[t.titleFont]?t.titleFont:'',paperColor:/^#[0-9a-f]{6}$/i.test(t.paperColor||'')?t.paperColor:''};
   const keys=new Set(o.sections.map(s=>s.key));
-  for(const b of BASE_SECTIONS)if(!keys.has(b.key))o.sections.push({key:b.key,label:b.label,on:false,col:b.col});
+  for(const b of BASE_SECTIONS)if(!keys.has(b.key)){if(b.key==='rating'){const mi=o.sections.findIndex(x=>x.key==='meta');o.sections.splice(mi>=0?mi+1:o.sections.length,0,{key:'rating',label:b.label,on:true,col:'a'});}else o.sections.push({key:b.key,label:b.label,on:false,col:b.col});}
   for(const f of o.customFields)if(!keys.has('x:'+f.key))o.sections.push({key:'x:'+f.key,label:f.label,on:true,col:'a'});
   o.sections=o.sections.filter(s=>!s.key.startsWith('x:')||o.customFields.some(f=>'x:'+f.key===s.key));
   return o;
@@ -583,6 +594,9 @@ function sectionHtml(s,r,t){
   if(k==='steps'){const L=(r.steps||[]).filter(x=>String(x).trim());return L.length?`<div class="sh-sec">${H}${L.map((t,i)=>`<div class="step"><span class="step-n">${i+1}${''}</span><div class="step-t">${esc(t)}</div></div>`).join('')}</div>`:'';}
   if(k==='nutrition'){const n=r.nutrition||{};const it=[['kcal',n.kcal],['Eiweiß',n.protein],['Kohlenhydr.',n.carbs],['Fett',n.fat]].filter(x=>str(x[1]));return it.length?`<div class="sh-sec">${H}<div class="nut">${it.map(([l,v])=>`<div><b>${esc(v)}</b><small>${l}</small></div>`).join('')}</div></div>`:'';}
   if(k==='tips')return str(r.tips)?`<div class="sh-sec sh-tipbox">${H}<div class="sh-text">${nl2br(r.tips)}</div></div>`:'';
+  if(k==='rating'){const n=Math.max(0,Math.min(5,Math.round(+r.rating||0)));const col=t?darken(t.accent):'#555';
+    const star=f=>`<svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6-4.5-4.2 6.1-.8z" fill="${f?col:'none'}" stroke="${col}" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+    return `<div class="sh-sec sh-rating">${H}<div class="stars">${[1,2,3,4,5].map(i=>star(i<=n)).join('')}</div></div>`;}
   if(k==='notes')return `<div class="sh-sec">${H}${'<div class="notes-line"></div>'.repeat(5)}</div>`;
   if(k==='source')return str(r.source)?`<div class="sh-sec sh-src">${esc(s.label)}: ${esc(r.source)}</div>`:'';
   if(k.startsWith('x:')){if(OVEN_KEYS.includes(k.slice(2)))return '';const cf=t&&(t.customFields||[]).find(f=>f.key===k.slice(2));if(cf&&cf.inMeta)return '';const v=str(r.extra&&r.extra[k.slice(2)]);return v?`<div class="sh-sec">${H}<div class="sh-text">${nl2br(v)}</div></div>`:'';}
@@ -610,7 +624,7 @@ function mountPreviews(){
     $('.pv-scale',fr).style.transform=`scale(${s})`;fr.style.width=(w*s)+'px';fr.style.height=(h*s)+'px';
     $$('.pb',sheet).forEach(e=>e.remove());
     const P=PAPER[sheet.dataset.paper]||PAPER.A4;const m=P.pad*.75;
-    let y=P.h-m,k=2;
+    let y=P.h-m,k=2;if(h<=P.h+4)y=Infinity;
     while(y<h-24){const d=document.createElement('div');d.className='pb';d.style.top=y+'px';d.innerHTML=`<span>≈ Seite ${k}</span>`;sheet.appendChild(d);y+=P.h-2*m;k++;}
   });
 }
@@ -650,9 +664,9 @@ function matchesQ(r){
 }
 function cardHtml(r){
   const h=hueOf(r.category);const src=photoSrc(r);
-  const meta=[r.totalTime||r.prepTime,r.servings].filter(Boolean).join(' · ');
+  const meta=[r.totalTime||r.prepTime,r.servings].filter(Boolean).join(' · ');const stars=+r.rating?'★'.repeat(+r.rating)+'☆'.repeat(5-(+r.rating)):'';
   const ars=['3/4','4/5','1/1','2/3','4/5','5/6'];let hs=0;for(const ch of String(r.id))hs=(hs*17+ch.charCodeAt(0))%997;
-  return `<button class="card" data-act="open" data-id="${esc(r.id)}" style="--h:${h};--ar:${src?ars[hs%ars.length]:ars[(hs+1)%ars.length]}"><div class="thumb" ${bgAttr(r)}>${src?'':`<b>${esc(r.title||'Ohne Titel')}</b>`}${r.example?'<span class="badge">Beispiel</span>':''}</div><div class="card-b">${S.cat==='alle'?`<span class="card-c"><i></i>${esc(r.category||'')}</span>`:''}<span class="card-t">${esc(r.title||'Ohne Titel')}</span>${meta?`<span class="card-m">${esc(meta)}</span>`:''}</div></button>`;
+  return `<button class="card" data-act="open" data-id="${esc(r.id)}" style="--h:${h};--ar:${src?ars[hs%ars.length]:ars[(hs+1)%ars.length]}"><div class="thumb" ${bgAttr(r)}>${src?'':`<b>${esc(r.title||'Ohne Titel')}</b>`}${r.example?'<span class="badge">Beispiel</span>':r.review?'<span class="badge" style="background:var(--accent);color:var(--accent-ink)">Neu · prüfen</span>':''}</div><div class="card-b">${S.cat==='alle'?`<span class="card-c"><i></i>${esc(r.category||'')}</span>`:''}<span class="card-t">${esc(r.title||'Ohne Titel')}</span>${meta?`<span class="card-m">${esc(meta)}</span>`:''}${stars?`<span class="card-s">${stars}</span>`:''}</div></button>`;
 }
 function libResults(){
   const L=sortRecipes(S.recipes.filter(matchesQ));
@@ -692,8 +706,10 @@ function viewDetail(){
     <button class="btn" data-act="edit" ${canWrite?'':'disabled'}>Bearbeiten</button>
     <button class="btn" data-act="print-one">Drucken</button>
     <button class="btn primary" data-act="pdf-one">Als PDF speichern</button>
+    <span class="rate" aria-label="Bewertung">${[1,2,3,4,5].map(i=>`<button data-act="rate" data-v="${i}" aria-pressed="${i<=(+r.rating||0)}" aria-label="${i} Stern${i>1?'e':''}">★</button>`).join('')}</span>
     <button class="btn danger" data-act="del-ask" ${canWrite?'':'disabled'}>Löschen</button></div>
     ${S.confirm==='rec'?`<div class="confirm"><b>„${esc(r.title)}“ endgültig löschen?</b><span class="muted">Screenshots und Foto werden mit entfernt.</span><span class="spacer"></span><button class="btn" data-act="confirm-no">Abbrechen</button><button class="btn danger solid" data-act="del-rec">Löschen</button></div>`:''}
+    ${r.review?`<div class="confirm" style="background:var(--accent-soft)"><span>Dieses Rezept wurde automatisch eingelesen. Kurz prüfen, ob alles stimmt.</span><span class="spacer"></span><button class="btn sm" data-act="edit">Bearbeiten</button><button class="btn sm primary" data-act="reviewed">Passt so ✓</button></div>`:''}
     ${r.example?`<p class="note" style="margin-bottom:14px">Das ist ein Beispielrezept zum Ausprobieren der Vorlagen. Du kannst es jederzeit löschen.</p>`:''}
     ${previewHtml(r,t)}
     ${shots.length?`<details class="orig"><summary>Original-Screenshots (${shots.length})</summary><div class="shots">${shots.map(id=>`<button data-act="zoom" data-zimg="${esc(id)}"><img data-img="${esc(id)}" alt="Screenshot"></button>`).join('')}</div></details>`:''}`;
@@ -764,6 +780,7 @@ function viewUpload(){
     <label class="drop" id="drop" for="fileIn"><p class="h2">Screenshots hierher ziehen</p><p class="muted" style="margin:0">oder klicken zum Auswählen · Einfügen mit Strg+V geht auch</p><p class="muted" style="margin:6px 0 0;font-size:13px">PNG, JPG, WebP · mehrere Bilder ergeben ein Rezept, in der angezeigten Reihenfolge</p></label>
     <div class="files">${U.files.map((x,i)=>`<figure class="fi" style="margin:0"><span class="num">${i+1}</span><img src="${esc(x.url)}" alt="Screenshot ${i+1}"><div class="ctl"><button class="ib" data-act="f-left" data-i="${i}" ${i?'':'disabled'} aria-label="Nach vorne">←</button><button class="ib" data-act="zoom" data-src="${esc(x.url)}" aria-label="Vergrößern">⤢</button><button class="ib" data-act="f-del" data-i="${i}" aria-label="Entfernen">✕</button><button class="ib" data-act="f-right" data-i="${i}" ${i<U.files.length-1?'':'disabled'} aria-label="Nach hinten">→</button></div></figure>`).join('')}</div>
     <details style="margin-top:14px" ${U.text?'open':''}><summary style="cursor:pointer;font-weight:600">Stattdessen oder zusätzlich Text einfügen</summary><textarea class="inp" id="u-text" rows="5" style="margin-top:8px" placeholder="Rezepttext hier einfügen …">${esc(U.text)}</textarea></details>
+    ${S.batch?batchHtml():''}
     ${S.extract?`<div class="status" id="exStatus">${S.extract.running?`<span class="spin"></span><span id="exMsg">${esc(S.extract.msg)}</span><span class="spacer"></span><button class="btn sm" data-act="ex-stop">Stoppen</button>`:`<span>${esc(S.extract.msg)}</span>`}</div>`:''}
   </div>
   <aside class="panel" style="display:flex;flex-direction:column;gap:14px">
@@ -771,8 +788,9 @@ function viewUpload(){
     <label class="field"><span>Vorlage</span><select class="inp" id="u-tpl">${tpls.map(x=>`<option value="${esc(x.id)}" ${x.id===t.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
       <small>${esc(STYLES[t.style])} · ${t.columns===2?'zwei Spalten':'eine Spalte'} · ${PAPER[t.paper].label}${t.customFields.length?' · Zusatzfelder: '+t.customFields.map(x=>esc(x.label)).join(', '):''}</small></label>
     <label class="field"><span>Kategorie</span><select class="inp" id="u-cat"><option value="auto">Automatisch erkennen</option>${cats().map(c=>`<option ${U.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></label>
+    ${U.files.length>1?`<div class="field"><span>Mehrere Bilder</span><div class="seg"><button data-act="u-multi" data-v="0" aria-pressed="${!U.multi}">Ein Rezept</button><button data-act="u-multi" data-v="1" aria-pressed="${!!U.multi}">Jedes Bild ein Rezept</button></div><small>${U.multi?`Es werden ${U.files.length} einzelne Rezepte angelegt und direkt gespeichert. Du prüfst sie danach in Ruhe.`:'Alle Bilder gehören zu einem Rezept (z. B. ein langes Rezept über mehrere Screenshots).'}</small></div>`:''}
     <label class="row" style="gap:8px;font-size:14px"><input type="checkbox" id="u-translate" ${U.translate?'checked':''}> Fremdsprachige Rezepte ins Deutsche übersetzen</label>
-    ${AI.key?`<button class="btn primary" data-act="extract" ${busy?'disabled':''} style="justify-content:center;padding:11px">Mit ${aiName()} auslesen</button>
+    ${AI.key?`<button class="btn primary" data-act="extract" ${busy?'disabled':''} style="justify-content:center;padding:11px">${U.multi&&U.files.length>1?`${U.files.length} Rezepte mit ${aiName()} auslesen`:`Mit ${aiName()} auslesen`}</button>
     <button class="btn" data-act="ocr" ${busy?'disabled':''} style="justify-content:center">Ohne KI: nur Text erkennen</button>`:`<button class="btn primary" data-act="ocr" ${busy?'disabled':''} style="justify-content:center;padding:11px">Text erkennen (ohne KI)</button>
     <p class="note" style="margin:0;font-size:13.5px">Ohne KI wird der Text erkannt und grob in Zutaten und Schritte sortiert, den Rest prüfst du selbst. Mit einem KI-Schlüssel (Gemini gibt es kostenlos) wird alles sauber ausgelesen, übersetzt und das Foto ausgeschnitten. <button class="linkbtn" data-act="nav" data-view="settings">Schlüssel hinterlegen</button></p>`}
     <button class="btn ghost" data-act="manual" ${canWrite?'':'disabled'} style="justify-content:center">Ohne Screenshot von Hand anlegen</button>
@@ -1001,7 +1019,7 @@ async function saveDraft(){
     }else if(d._photoBlob){d._photoBlob=null;}
     const body=cleanRecipe(d);body.photoId=body.photoId||null;body.updatedAt=Date.now();if(!body.createdAt)body.createdAt=Date.now();
     body.tags=(body.tags||[]).filter(Boolean);body.ingredients=(body.ingredients||[]).filter(Boolean);body.steps=(body.steps||[]).filter(Boolean);
-    delete body.example;
+    delete body.example;delete body.review;
     await ref.set(body);
     askPersist();
     for(const id of [oldPhoto,replaced])if(id&&assets&&id!==body.photoId)assets.delete(id).catch(()=>{});
@@ -1297,6 +1315,8 @@ document.addEventListener('click',async ev=>{
   switch(a){
     case 'nav': go(b.dataset.view);break;
     case 'cat': S.cat=b.dataset.cat;render();break;
+    case 'rate': {const r=S.recipes.find(x=>x.id===S.openId);if(!r)break;const v=+b.dataset.v;const nv=(+r.rating||0)===v?0:v;r.rating=nv;render();try{await db.collection('recipes').doc(r.id).update({rating:nv});}catch(_){}break;}
+    case 'reviewed': {const r=S.recipes.find(x=>x.id===S.openId);if(!r)break;r.review=false;render();try{await db.collection('recipes').doc(r.id).update({review:false});}catch(_){}break;}
     case 'cat-new-go': go('templates');setTimeout(()=>{const i=$('#cat-new');if(i){i.scrollIntoView({block:'center'});i.focus();}},80);break;
     case 'tpl-new-go': go('templates');setTimeout(()=>{const n=$('[data-act="tpl-new"]');if(n)n.click();},80);break;
     case 'open': go('detail',{openId:b.dataset.id,backTo:S.view==='pantry'?'pantry':'library'});break;
@@ -1314,8 +1334,11 @@ document.addEventListener('click',async ev=>{
     case 'draft-save': await saveDraft();break;
     case 'photo-del': {const d=S.draft;if(d.photoId)d._removePhotoId=d.photoId;d.photoId=null;d._photoBlob=null;d._photoUrl=null;const y=scrollY;render();scrollTo({top:y});break;}
     case 'ai-extras': await aiFillExtras();break;
-    case 'extract': await runExtract();break;
-    case 'ocr': await runOcr();break;
+    case 'extract': if(S.upload.multi&&S.upload.files.length>1)await runBatch();else await runExtract();break;
+    case 'u-multi': S.upload.multi=b.dataset.v==='1';render();break;
+    case 'batch-stop': if(S.batch)S.batch.stop=true;render();break;
+    case 'batch-close': S.batch=null;render();break;
+    case 'ocr': if(S.upload.multi&&S.upload.files.length>1)await runBatch(true);else await runOcr();break;
     case 'sheet-close': closeSheet();break;
     case 'sheet-share': if(sheetState&&sheetState.file){try{await navigator.share({files:[sheetState.file],title:sheetState.file.name});}catch(_){}}break;
     case 'sheet-dl': setTimeout(closeSheet,400);break;
@@ -1352,6 +1375,8 @@ document.addEventListener('click',async ev=>{
     case 'tpl-set': {const k=b.dataset.k;let v=b.dataset.v;if(k==='columns')v=+v;if(k==='fontScale')v=+v;S.tplDraft[k]=v;tplChanged(true);break;}
     case 'sec-up': case 'sec-down': {const L=S.tplDraft.sections,j=a==='sec-up'?i-1:i+1;if(L[j]){[L[i],L[j]]=[L[j],L[i]];tplChanged(true);}break;}
     case 'fill-run': await fillFieldsForTemplate();break;
+    case 'complete-run': await completeAll();break;
+    case 'complete-stop': if(S.compJob)S.compJob.stop=true;break;
     case 'fill-stop': if(S.fillJob)S.fillJob.stop=true;break;
     case 'cf-add': {const label=$('#cf-label').value.trim();if(!label){toast('Gib dem Feld einen Namen.','err');break;}let key=slug(label);const T=S.tplDraft;let n=2;const base=key;while(T.customFields.some(f=>f.key===key)||BASE_SECTIONS.some(s=>s.key===key))key=base+'-'+(n++);
       T.customFields.push({key,label,hint:$('#cf-hint').value.trim()});{const si=T.sections.findIndex(x=>x.key==='source'||x.key==='notes');const ns={key:'x:'+key,label,on:true,col:'a'};if(si>=0)T.sections.splice(si,0,ns);else T.sections.push(ns);}tplChanged(true);break;}
@@ -1918,6 +1943,7 @@ function viewSettings(){
       ${AI.key&&models.length?`<label class="field"><span>Modell</span><select class="inp" id="modelSel">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===AI.model?'selected':''}>${esc(m.name)}</option>`).join('')}</select><small>${AI.provider==='gemini'?'Empfohlen: „Gemini Flash Latest“. Falls das Auslesen lange dauert, probier „Gemini 2.5 Flash“ oder ein „Flash-Lite“-Modell, die sind am schnellsten.':'Sonnet ist ein guter Mittelweg. Haiku ist günstiger, liest aber ungenauer.'}</small></label>`:''}
       <p class="muted" style="margin:0;font-size:12.5px">Der Schlüssel wird nur auf diesem Gerät gespeichert. Trag ihn auf jedem Gerät ein, auf dem du Screenshots auslesen willst.</p>
     </section>
+    ${completeBoxHtml()}
     <section class="panel">
       <h2 class="h2">Sicherung</h2>
       <p class="muted" style="margin:0;font-size:14px">${SYNC.code?'Zusätzlich zur Cloud kannst du ab und zu eine Sicherungsdatei erstellen, für den Fall der Fälle.':'Deine Rezepte liegen nur in diesem Browser. Mit einer Sicherungsdatei holst du sie auf ein anderes Gerät oder stellst sie wieder her.'}</p>
@@ -2050,6 +2076,114 @@ async function fillFieldsForTemplate(){
   }
   J.running=false;
   J.msg=errMsg?errMsg:J.stop?`Gestoppt. ${filled} Rezept(e) wurden ergänzt.`:`Fertig. ${filled} von ${J.total} Rezept(en) wurden ergänzt.`;J.err=!!errMsg;
+  render();
+}
+
+/* ---------- Mehrere Rezepte auf einmal ---------- */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function batchHtml(){
+  const B=S.batch;const done=B.items.filter(x=>x.status==='ok').length,err=B.items.filter(x=>x.status==='err').length;
+  const ic={wait:'○',run:'<span class="spin" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></span>',ok:'✓',err:'✕'};
+  return `<div class="panel" style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+    <div class="row"><b>${B.running?`Rezepte werden eingelesen … ${done+err} von ${B.items.length}`:`Fertig: ${done} gespeichert${err?`, ${err} mit Fehler`:''}`}</b><span class="spacer"></span>${B.running?'<button class="btn sm" data-act="batch-stop">Stoppen</button>':'<button class="btn sm primary" data-act="nav" data-view="library">Zu den Rezepten</button><button class="btn sm ghost" data-act="batch-close">Schließen</button>'}</div>
+    ${B.items.map(it=>`<div class="row" style="flex-wrap:nowrap;gap:10px"><img src="${esc(it.url)}" alt="" style="width:40px;height:52px;object-fit:cover;object-position:top;border-radius:6px;flex:none"><span style="width:18px;text-align:center;color:${it.status==='err'?'var(--danger)':it.status==='ok'?'var(--good)':'var(--muted)'}">${ic[it.status]}</span><span style="min-width:0;overflow-wrap:anywhere;font-size:14px">${it.status==='ok'?`<button class="linkbtn" data-act="open" data-id="${esc(it.id)}">${esc(it.title)}</button>`:it.status==='err'?`<span class="errline" style="font-size:13px">${esc(it.msg)}</span>`:it.status==='run'?'wird gelesen …':'wartet'}</span></div>`).join('')}
+    ${B.stopped?'<p class="muted" style="margin:0;font-size:13px">Gestoppt. Die restlichen Bilder wurden nicht eingelesen.</p>':''}
+  </div>`;
+}
+let ocrWorker=null;
+async function ocrText(file){
+  if(!ocrWorker){await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');ocrWorker=await window.Tesseract.createWorker('deu',1);}
+  const {data}=await ocrWorker.recognize(file);return data.text||'';
+}
+async function extractOne(it,t,U,useAI){
+  if(!useAI){const text=await ocrText(it.file);const rec=textToRecipe(text,t,U);rec._ocr=text;return rec;}
+  const tiles=await makeTiles([it.url]);const imgs=tiles.slice(0,20);
+  let out=null;
+  for(let a=0;a<2&&!out;a++){
+    try{out=await sample.json(buildPrompt(t,imgs.length,{...U,text:''}),{images:imgs.map(x=>x.blob)});}
+    catch(e){if(e&&e.code==='rate_limited'&&a===0){it.msg='Limit erreicht, warte kurz …';if(S.view==='upload')render();await sleep(20000);continue;}throw e;}
+  }
+  const rec=normalize(out,t,U);
+  if(out&&out.photo&&imgs[+out.photo.image]){try{const b=await cropPhoto(imgs[+out.photo.image].canvas,out.photo.box);if(b)rec._photoBlob=b;}catch(_){}}
+  return rec;
+}
+async function saveDirect(rec,file){
+  const ref=db.collection('recipes').doc();
+  try{const r=await assets.upload(file,{type:['image/png','image/jpeg','image/webp','image/gif'].includes(file.type)?file.type:'image/png'});rec.screenshotIds=[r.id];}catch(_){}
+  if(rec._photoBlob){try{const r=await assets.upload(rec._photoBlob,{type:'image/jpeg'});rec.photoId=r.id;}catch(_){}}
+  const body=cleanRecipe(rec);body.photoId=body.photoId||null;body.createdAt=Date.now();body.updatedAt=Date.now();body.review=true;
+  await ref.set(body);askPersist();return ref.id;
+}
+async function runBatch(forceOcr){
+  const U=S.upload;if(!U.files.length)return;
+  const useAI=!forceOcr&&!!AI.key;const t=tplById(U.tplId);
+  S.batch={items:U.files.map(f=>({url:f.url,file:f.file,status:'wait',title:'',msg:'',id:''})),running:true,stop:false};
+  S.upload.files=[];S.upload.multi=false;render();
+  const B=S.batch;
+  for(const it of B.items){
+    if(B.stop){B.stopped=true;break;}
+    it.status='run';if(S.view==='upload')render();
+    try{const rec=await extractOne(it,t,U,useAI);it.id=await saveDirect(rec,it.file);it.title=rec.title||'Neues Rezept';it.status='ok';it.msg='';}
+    catch(e){it.status='err';it.msg=e&&e.code?sampleErr(e):'Das Bild konnte nicht gelesen werden.';}
+    if(S.view==='upload')render();
+    if(useAI)await sleep(1500);
+  }
+  B.running=false;if(B.stop)B.stopped=true;render();
+  toast(`${B.items.filter(x=>x.status==='ok').length} Rezept(e) eingelesen.`);
+}
+
+/* ---------- Alle Rezepte vervollständigen ---------- */
+function completeNeeds(r){
+  const t=tplById(r.templateId);const o=ovenInfo(r);const need=[];
+  if(!str(r.temperature)&&!o.temp)need.push('temperature');
+  if(!str(r.ovenMode)&&!o.mode)need.push('ovenMode');
+  if(!str(r.difficulty))need.push('difficulty');
+  if(!str(r.totalTime))need.push('totalTime');
+  if(!(r.tags||[]).length)need.push('tags');
+  for(const f of t.customFields||[])if(!OVEN_KEYS.includes(f.key)&&t.sections.some(x=>x.key==='x:'+f.key&&x.on)&&!str(r.extra&&r.extra[f.key]))need.push('x:'+f.key);
+  const done=r.compChecked||[];return need.filter(k=>!done.includes(k));
+}
+function completeBoxHtml(){
+  const list=S.recipes.filter(r=>(r.ingredients||[]).length&&completeNeeds(r).length);const J=S.compJob;
+  let body;
+  if(J&&J.running)body=`<div class="row"><span class="spin"></span><span>Rezepte werden ergänzt … ${J.done} von ${J.total}</span><span class="spacer"></span><button class="btn sm" data-act="complete-stop">Stoppen</button></div>`;
+  else{
+    body=(J&&J.msg?`<p class="${J.err?'errline':'okline'}" style="margin:0">${esc(J.msg)}</p>`:'')+
+      (!list.length?'<p class="muted" style="margin:0;font-size:14px">Alle Rezepte sind vollständig.</p>':!AI.key?`<p class="muted" style="margin:0;font-size:14px">${list.length} Rezept(e) haben noch Lücken. Mit einem KI-Schlüssel kann die App sie ergänzen.</p>`:`<button class="btn primary" data-act="complete-run" style="align-self:flex-start">${list.length} Rezept(e) ergänzen</button>`);
+  }
+  return `<section class="panel"><h2 class="h2">Rezepte vervollständigen</h2><p class="muted" style="margin:0;font-size:14px">Ergänzt fehlende Angaben wie Temperatur, Ofeneinstellung, Schwierigkeit, Gesamtzeit, Schlagworte und deine Zusatzfelder (z. B. Allergene). Die KI leitet sie aus Zutaten und Zubereitung ab. Was nicht sicher ist, bleibt leer, vorhandene Angaben werden nicht überschrieben.</p>${body}</section>`;
+}
+async function completeAll(){
+  if(!AI.key)return;
+  const list=S.recipes.filter(r=>(r.ingredients||[]).length&&completeNeeds(r).length);if(!list.length)return;
+  const J=S.compJob={running:true,done:0,total:list.length,stop:false};render();
+  let changed=0,errMsg='';
+  for(let i=0;i<list.length&&!J.stop;i+=5){
+    const chunk=list.slice(i,i+5);
+    const desc={temperature:'Backtemperatur, z. B. "180 °C" (nur wenn ein Ofen gebraucht wird)',ovenMode:'Ofeneinstellung, z. B. "Ober-/Unterhitze" oder "Umluft" (nur bei Ofen)',difficulty:'"leicht", "mittel" oder "schwer"',totalTime:'Gesamtzeit, z. B. "45 Min." (aus den Schritten abschätzen)',tags:'Liste mit 2–4 kurzen deutschen Schlagworten'};
+    const data=chunk.map(r=>{const t=tplById(r.templateId);const need=completeNeeds(r);
+      return {id:r.id,titel:r.title,portionen:r.servings,zeiten:[r.prepTime,r.cookTime].filter(Boolean).join(', '),zutaten:r.ingredients,schritte:r.steps,
+        fehlend:need.map(k=>{if(k.startsWith('x:')){const f=t.customFields.find(c=>c.key===k.slice(2));return {feld:k,bedeutung:(f?f.label:k)+(f&&f.hint?' ('+f.hint+')':'')};}return {feld:k,bedeutung:desc[k]};})};});
+    const prompt=`Hier sind ${chunk.length} Rezepte als JSON. Bei jedem steht unter "fehlend", welche Felder noch leer sind:\n${JSON.stringify(data).slice(0,80000)}\n\nErgänze NUR die fehlenden Felder, und nur wenn sie sich sicher aus Zutaten und Schritten ergeben. Sonst "" (bei tags []). Erfinde nichts.\nAntworte NUR mit JSON in dieser Form: {"<id>":{"<feld>":"<wert>"}}`;
+    let out=null;
+    for(let a=0;a<2&&!out;a++){try{out=await sample.json(prompt,{maxTokens:6000});}catch(e){if(e&&e.code==='rate_limited'&&a===0){await sleep(20000);continue;}errMsg=sampleErr(e);break;}}
+    if(!out)break;
+    for(const r of chunk){
+      const v=out[r.id]||{};const cur=Store.recipes.get(r.id)||r;const patch={compChecked:[...new Set([...(cur.compChecked||[]),...completeNeeds(cur)])]};let real=false;const ex={...(cur.extra||{})};let exCh=false;
+      for(const k of completeNeeds(cur)){
+        const val=v[k];
+        if(k==='tags'){const arr=Array.isArray(val)?val.map(x=>str(x)).filter(Boolean).slice(0,5):[];if(arr.length)patch.tags=arr;}
+        else if(k.startsWith('x:')){const s2=str(val);if(s2){ex[k.slice(2)]=s2;exCh=true;}}
+        else{let s2=str(val);if(k==='ovenMode')s2=normMode(s2);if(s2)patch[k]=s2;}
+      }
+      if(exCh)patch.extra=ex;real=Object.keys(patch).length>1;
+      try{await db.collection('recipes').doc(r.id).update(patch);if(real)changed++;}catch(_){}
+      J.done++;
+    }
+    if(S.view==='settings')render();
+    if(i+5<list.length&&!J.stop)await sleep(1500);
+  }
+  J.running=false;J.err=!!errMsg;J.msg=errMsg||(J.stop?`Gestoppt. ${changed} Rezept(e) ergänzt.`:`Fertig. ${changed} von ${J.total} Rezept(en) ergänzt.`);
   render();
 }
 

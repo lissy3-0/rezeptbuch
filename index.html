@@ -291,6 +291,32 @@ main a{color:var(--accent)}
 .pv-page{position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(80,20,40,.10),0 12px 32px -6px rgba(120,40,70,.22)}
 .pv-pno{position:absolute;right:10px;bottom:8px;font:600 11px/1 var(--f-body);color:#a08890;background:rgba(255,255,255,.8);padding:3px 7px;border-radius:999px}
 
+/* Layout */
+.sheet{--cgap:calc(24px * var(--fs))}
+.lrow{display:flex;gap:var(--cgap);align-items:flex-start;position:relative}
+.lcol{min-width:0}
+.lcol.wide .sh-photo{aspect-ratio:21/9}
+.st-blush .lcol.wide .sh-photo,.st-bogen .lcol.wide .sh-photo{aspect-ratio:16/10}
+.st-bogen .lcol.wide .sh-photo{border-radius:14em 14em 1em 1em}
+.st-blush .lcol.wide .ings,.st-pastell .lcol.wide .ings{display:grid;grid-template-columns:1fr 1fr;column-gap:1.6em}
+.st-blush .lcol.wide .sh-rating,.st-klassisch .lcol.wide .sh-rating{text-align:center}
+.st-blush .lcol.wide .sh-rating .stars,.st-klassisch .lcol.wide .sh-rating .stars{justify-content:center}
+.st-blush .lcol.wide .sh-rating .sh-h::after{margin-left:auto;margin-right:auto}
+.ph-empty{display:flex;align-items:center;justify-content:center;background:#efe9eb!important;color:#a08890;font-size:.9em}
+.lsec.edm{cursor:pointer;border-radius:6px;outline:1.5px solid transparent;outline-offset:3px;transition:outline-color .15s}
+.lsec.edm:hover{outline-color:rgba(196,84,122,.35)}
+.lsec.sel{outline:2.5px solid #C4547A;outline-offset:3px;cursor:grab;touch-action:none}
+.lsec.drag{opacity:.45}
+.ldiv{position:absolute;top:0;bottom:0;width:14px;cursor:col-resize;touch-action:none;z-index:2;display:flex;justify-content:center}
+.ldiv::after{content:"";width:3px;border-radius:2px;background:rgba(196,84,122,.35)}
+.ldiv:hover::after,.ldiv.on::after{background:#C4547A}
+#dropLine{position:fixed;height:3px;background:var(--accent);border-radius:2px;z-index:90;pointer-events:none;box-shadow:0 0 0 2px var(--surface)}
+.lbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px 10px;margin-bottom:10px;position:sticky;top:calc(64px + env(safe-area-inset-top,0px));z-index:5}
+.lbar b{margin-right:6px}
+.lbar .ib{width:34px;height:34px;font-size:15px}
+.lbar .sep{width:1px;height:22px;background:var(--line);margin:0 2px}
+.lhint{font-size:13px;color:var(--muted);margin:0 0 10px}
+
 /* Meldungen */
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
 #toast.err{background:var(--danger);color:var(--surface)}
@@ -546,12 +572,13 @@ function normTpl(t){
   const o={id:t.id,name:t.name||'Vorlage',style:STYLES[t.style]?t.style:'blush',columns:t.columns==2?2:1,paper:PAPER[t.paper]?t.paper:'A4',
     accent:/^#[0-9a-f]{6}$/i.test(t.accent||'')?t.accent:'#D46A8C',fontScale:+t.fontScale||1,showCategory:t.showCategory!==false,showTags:t.showTags!==false,
     customFields:Array.isArray(t.customFields)?t.customFields.filter(f=>f&&f.key).map(f=>({key:f.key,label:f.label||f.key,hint:f.hint||'',inMeta:!!f.inMeta})):[],
-    sections:Array.isArray(t.sections)?t.sections.filter(s=>s&&s.key).map(s=>({key:s.key,label:s.label||'',on:s.on!==false,col:s.col==='a'?'a':'b'})):[],
+    sections:Array.isArray(t.sections)?t.sections.filter(s=>s&&s.key).map(s=>({key:s.key,label:s.label||'',on:s.on!==false,col:s.col==='a'?'a':'b',size:+s.size>0?+s.size:1})):[],layout:t.layout,
     createdAt:t.createdAt||0,_virtual:!!t._virtual,titleFont:TITLE_FONTS[t.titleFont]?t.titleFont:'',fit:FIT_MODES[t.fit]?t.fit:'pages',paperColor:/^#[0-9a-f]{6}$/i.test(t.paperColor||'')?t.paperColor:''};
   const keys=new Set(o.sections.map(s=>s.key));
   for(const b of BASE_SECTIONS)if(!keys.has(b.key)){if(b.key==='rating'){const mi=o.sections.findIndex(x=>x.key==='meta');o.sections.splice(mi>=0?mi+1:o.sections.length,0,{key:'rating',label:b.label,on:true,col:'a'});}else o.sections.push({key:b.key,label:b.label,on:false,col:b.col});}
   for(const f of o.customFields)if(!keys.has('x:'+f.key))o.sections.push({key:'x:'+f.key,label:f.label,on:true,col:'a'});
   o.sections=o.sections.filter(s=>!s.key.startsWith('x:')||o.customFields.some(f=>'x:'+f.key===s.key));
+  o.layout=normLayout(o.layout,o);
   return o;
 }
 function allTemplates(){
@@ -587,6 +614,7 @@ function ingLine(line){
 function sectionHtml(s,r,t){
   const H=`<h2 class="sh-h"><span>${esc(s.label)}</span></h2>`;
   const k=s.key;
+  if(k==='photo'&&!hasPhoto(r)&&r._photoPh)return `<div class="sh-sec"><div class="sh-photo ph-empty"><span>Foto</span></div></div>`;
   if(k==='photo')return hasPhoto(r)?`<div class="sh-sec"><div class="sh-photo" ${bgAttr(r)}></div></div>`:'';
   if(k==='intro')return r.intro?`<div class="sh-sec"><p class="sh-intro">${nl2br(r.intro)}</p></div>`:'';
   if(k==='meta'){
@@ -608,19 +636,55 @@ function sectionHtml(s,r,t){
   if(k.startsWith('x:')){if(OVEN_KEYS.includes(k.slice(2)))return '';const cf=t&&(t.customFields||[]).find(f=>f.key===k.slice(2));if(cf&&cf.inMeta)return '';const v=str(r.extra&&r.extra[k.slice(2)]);return v?`<div class="sh-sec">${H}<div class="sh-text">${nl2br(v)}</div></div>`:'';}
   return '';
 }
+function defaultLayout(o){
+  if(o.columns===2){const a=o.sections.filter(x=>x.col==='a').map(x=>x.key),b=o.sections.filter(x=>x.col!=='a').map(x=>x.key);return [{cols:[{w:o.paper==='A4'?34:40,items:a},{w:o.paper==='A4'?66:60,items:b}]}];}
+  return [{cols:[{w:100,items:o.sections.map(x=>x.key)}]}];
+}
+function normLayout(L,o){
+  const keys=o.sections.map(x=>x.key);const seen=new Set();
+  let rows=(Array.isArray(L)&&L.length?JSON.parse(JSON.stringify(L)):defaultLayout(o)).map(r=>({cols:(Array.isArray(r&&r.cols)?r.cols:[]).map(c=>({w:+c.w||0,items:(Array.isArray(c&&c.items)?c.items:[]).filter(k=>keys.includes(k)&&!seen.has(k)&&(seen.add(k),true))}))}));
+  const missing=keys.filter(k=>!seen.has(k));
+  rows=rows.map(r=>({cols:r.cols.filter(c=>c.items.length)})).filter(r=>r.cols.length);
+  if(missing.length){if(!rows.length)rows.push({cols:[{w:100,items:[]}]});const lr=rows[rows.length-1];lr.cols[lr.cols.length-1].items.push(...missing);}
+  if(!rows.length)rows=[{cols:[{w:100,items:[]}]}];
+  for(const r of rows){
+    if(r.cols.length===1){r.cols[0].w=100;continue;}
+    const known=r.cols.filter(c=>c.w>0),sum=known.reduce((a,c)=>a+c.w,0),rest=r.cols.length-known.length;
+    for(const c of r.cols)if(!(c.w>0))c.w=rest?Math.max(15,(100-Math.min(sum,85))/rest):20;
+    const tot=r.cols.reduce((a,c)=>a+c.w,0);for(const c of r.cols)c.w=Math.max(12,Math.round(c.w/tot*1000)/10);
+  }
+  return rows;
+}
+function isSingleCol(L){return !L||L.length===1&&L[0].cols.length===1;}
+function twoColLayout(t){
+  const all=t.layout.flatMap(r=>r.cols.flatMap(c=>c.items));const leftKeys=['rating','meta','ingredients','nutrition'];
+  const a=all.filter(k=>leftKeys.includes(k)||k.startsWith('x:')),b=all.filter(k=>!a.includes(k));
+  return [{cols:[{w:40,items:a},{w:60,items:b}]}];
+}
+function editSample(r){
+  const o=clone(r);const d=DEMO;
+  for(const k of ['intro','servings','prepTime','cookTime','totalTime','difficulty','tips','source'])if(!str(o[k]))o[k]=d[k];
+  if(!(o.ingredients||[]).length)o.ingredients=d.ingredients.slice();if(!(o.steps||[]).length)o.steps=d.steps.slice();
+  o.nutrition=o.nutrition||{};if(!str(o.nutrition.kcal))o.nutrition=clone(d.nutrition);
+  if(!hasPhoto(o))o._photoPh=true;return o;
+}
 function renderSheet(r,t){
   const P=PAPER[t.paper]||PAPER.A4;
-  const secs=t.sections.filter(s=>s.on);
-  let body;
-  if(t.columns===2){
-    const a=secs.filter(s=>s.col==='a').map(s=>sectionHtml(s,r,t)).join('');
-    const b=secs.filter(s=>s.col!=='a').map(s=>sectionHtml(s,r,t)).join('');
-    body=`<div class="cols"><div class="col col-a">${a}</div><div class="col col-b">${b}</div></div>`;
-  }else body=secs.map(s=>sectionHtml(s,r,t)).join('');
+  const L=t._alt2?twoColLayout(t):(t.layout||defaultLayout(t));let multi=false;
+  const secOf=k=>t.sections.find(x=>x.key===k);
+  const body=L.map((row,ri)=>{
+    const cols=row.cols.map((c,ci)=>({ci,w:c.w,html:c.items.map(k=>{const sc=secOf(k);if(!sc||!sc.on)return '';const h=sectionHtml(sc,r,t);if(!h)return '';
+      const sz=+sc.size||1;const st=k==='photo'?(sz<1?`width:${Math.round(sz*100)}%;margin-left:auto;margin-right:auto;`:''):(sz!==1?`font-size:${sz}em;`:'');
+      return `<div class="lsec${t._edit?' edm':''}${t._edit&&S.selSec===k?' sel':''}" data-sk="${esc(k)}"${st?` style="${st}"`:''}>${h}</div>`;}).join('')})).filter(c=>c.html);
+    if(!cols.length)return '';if(cols.length>1)multi=true;
+    const tot=cols.reduce((a,c)=>a+c.w,0)||100;let cum=0;
+    const colsHtml=cols.map((c,i)=>{const w=c.w/tot*100;cum+=w;return `<div class="lcol ${w<45?'col-a':'col-b'}${w>=70?' wide':''}" data-row="${ri}" data-col="${c.ci}" style="flex:0 0 calc(${w.toFixed(2)}% - var(--cgap) * ${((cols.length-1)/cols.length).toFixed(3)})">${c.html}</div>`+(t._edit&&!t._alt2&&i<cols.length-1?`<span class="ldiv" data-row="${ri}" data-a="${c.ci}" data-b="${cols[i+1].ci}" style="left:calc(${cum.toFixed(2)}% - 7px)" title="Ziehen zum Ändern der Breite"></span>`:'');}).join('');
+    return `<div class="lrow">${colsHtml}</div>`;
+  }).join('');
   const head=`<header class="sh-head">${t.style==='pastell'?'<div class="tape"></div>':''}${t.showCategory&&r.category?`<span class="sh-cat">${esc(r.category)}</span>`:''}<h1 class="sh-title">${esc(r.title||'Ohne Titel')}</h1>${t.showTags&&(r.tags||[]).length?`<div class="sh-tags">${r.tags.map(x=>`<span class="tag">${esc(x)}</span>`).join('<span class="tsep"> · </span>')}</div>`:''}</header>`;
-  return `<div class="sheet st-${t.style} ${t.columns===2?'two':'one'} p-${t.paper}${t.titleFont?' tf-'+t.titleFont:''}" data-paper="${t.paper}" style="${t.paperColor?'background:'+t.paperColor+';':''}--pw:${P.w}px;--ph:${P.h}px;--pad:${P.pad}px;--base:${P.base}px;--fs:${t.fontScale};--acc:${t.accent};--acc-soft:${soften(t.accent,.8)};--acc-pale:${soften(t.accent,.93)};--acc-deep:${darken(t.accent)}">${t.style==='karte'?'<div class="rand"></div>':''}${head}${body}</div>`;
+  return `<div class="sheet st-${t.style} ${multi?'two':'one'} p-${t.paper}${t.titleFont?' tf-'+t.titleFont:''}" data-paper="${t.paper}" style="${t.paperColor?'background:'+t.paperColor+';':''}--pw:${P.w}px;--ph:${P.h}px;--pad:${P.pad}px;--base:${P.base}px;--fs:${t.fontScale};--acc:${t.accent};--acc-soft:${soften(t.accent,.8)};--acc-pale:${soften(t.accent,.93)};--acc-deep:${darken(t.accent)}">${t.style==='karte'?'<div class="rand"></div>':''}${head}${body}</div>`;
 }
-function previewHtml(r,t){const alt=t.fit==='cols'&&t.columns===1?`<template class="pv-alt">${renderSheet(r,{...t,columns:2})}</template>`:'';return `<div class="preview"><div class="pv-frame" data-fit="${t.fit||'pages'}" data-fs="${t.fontScale}">${alt}<div class="pv-scale">${renderSheet(r,t)}</div></div></div>`;}
+function previewHtml(r,t){const alt=t.fit==='cols'&&isSingleCol(t.layout)?`<template class="pv-alt">${renderSheet(r,{...t,_alt2:true,_edit:false})}</template>`:'';return `<div class="preview"><div class="pv-frame" data-fit="${t.fit||'pages'}" data-fs="${t.fontScale}">${alt}<div class="pv-scale">${renderSheet(r,t)}</div></div></div>`;}
 const ATOMS='.sh-head,.ing,.ing-g,.step,.mi,.sh-h,.notes-line,.sh-intro,.sh-text,.nut,.sh-photo,.stars,.sh-src,.sh-meta';
 function pageSegments(sheet,P){
   const H=sheet.scrollHeight;const m=Math.round(P.pad*.75);
@@ -856,8 +920,8 @@ function viewTemplates(){
     const isX=s.key.startsWith('x:');const cfx=isX?t.customFields.find(f=>'x:'+f.key===s.key):null;
     return `<div class="secrow ${s.on?'':'off'}"><input type="checkbox" data-tsec="on" data-i="${i}" ${s.on?'checked':''} aria-label="${esc(s.label)} anzeigen">
       <input class="inp" data-tsec="label" data-i="${i}" value="${esc(s.label)}" title="${esc(isX?'Eigenes Feld':SEC_HELP[s.key]||'')}" aria-label="Überschrift">
-      ${t.columns===2?`<select class="inp" data-tsec="col" data-i="${i}" aria-label="Spalte"><option value="a" ${s.col==='a'?'selected':''}>links</option><option value="b" ${s.col!=='a'?'selected':''}>rechts</option></select>`:'<span></span>'}
-      <span class="mv"><button class="ib" data-act="sec-up" data-i="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button class="ib" data-act="sec-down" data-i="${i}" ${i<t.sections.length-1?'':'disabled'} aria-label="Nach unten">↓</button>${isX?`<button class="ib" data-act="cf-del" data-i="${i}" aria-label="Feld löschen">✕</button>`:''}</span>
+      <span></span>
+      <span class="mv"><button class="ib" data-act="sel-sec" data-k="${esc(s.key)}" aria-label="In der Vorschau auswählen" title="In der Vorschau auswählen">⌖</button>${isX?`<button class="ib" data-act="cf-del" data-i="${i}" aria-label="Feld löschen">✕</button>`:''}</span>
       ${isX?`<input class="inp hint" data-tcf="hint" data-key="${esc(cfx.key)}" value="${esc(cfx.hint)}" placeholder="Hinweis für die KI: was soll hier stehen?"><label class="hint row" style="gap:6px;font-size:13px;flex-wrap:nowrap"><input type="checkbox" data-tcf="inMeta" data-key="${esc(cfx.key)}" ${cfx.inMeta?'checked':''}> Klein bei den Eckdaten anzeigen (wie Portionen und Zeiten)</label>`:''}</div>`;}).join('');
   const catRows=cats().map((c,i)=>`<div class="catrow" style="--h:${hueOf(c)}"><i></i><input class="inp" data-catname="${i}" value="${esc(c)}" aria-label="Kategoriename"><span class="mv" style="display:flex;gap:2px"><button class="ib" data-act="cat-up" data-i="${i}" ${i?'':'disabled'} aria-label="Nach oben">↑</button><button class="ib" data-act="cat-down" data-i="${i}" ${i<cats().length-1?'':'disabled'} aria-label="Nach unten">↓</button></span><button class="ib" data-act="cat-del" data-i="${i}" ${(counts.get(c)||0)||cats().length<2?'disabled':''} title="${counts.get(c)?'Enthält Rezepte':'Löschen'}" aria-label="Kategorie löschen">✕</button></div>`).join('');
   return `<div style="margin-bottom:18px"><h1 class="h1">Vorlagen &amp; Kategorien</h1><p class="muted" style="margin:4px 0 0">Die Vorlage bestimmt nur das Aussehen. Die Rezeptdaten bleiben gleich, Änderungen gelten sofort für alle Rezepte mit dieser Vorlage.</p></div>
@@ -870,7 +934,7 @@ function viewTemplates(){
       <div class="panel" style="display:flex;flex-direction:column;gap:14px">
         <label class="field"><span>Name</span><input class="inp" data-t="name" value="${esc(t.name)}"></label>
         <div class="field"><span>Stil</span>${seg('style',Object.entries(STYLES),t.style)}</div>
-        <div class="field"><span>Aufteilung</span>${seg('columns',[[1,'Eine Spalte'],[2,'Zwei Spalten']],t.columns)}</div>
+        <div class="field"><span>Grundaufteilung (setzt die Anordnung zurück)</span>${seg('columns',[[1,'Eine Spalte'],[2,'Zwei Spalten']],t.columns)}</div>
         <div class="field"><span>Papier</span>${seg('paper',Object.entries(PAPER).map(([k,p])=>[k,p.label]),t.paper)}</div>
         <div class="field"><span>Schriftgröße</span>${seg('fontScale',[[0.9,'Klein'],[1,'Normal'],[1.1,'Groß']],[0.9,1,1.1].reduce((a,b)=>Math.abs(b-t.fontScale)<Math.abs(a-t.fontScale)?b:a))}</div>
         <div class="field"><span>Lange Rezepte</span>${seg('fit',Object.entries(FIT_MODES),t.fit||'pages')}<small>Was passiert, wenn ein Rezept nicht auf eine Seite passt.</small></div>
@@ -880,7 +944,7 @@ function viewTemplates(){
         <div class="row" style="gap:16px"><label class="row" style="gap:6px;font-size:14px"><input type="checkbox" data-t="showCategory" ${t.showCategory?'checked':''}> Kategorie im Kopf</label><label class="row" style="gap:6px;font-size:14px"><input type="checkbox" data-t="showTags" ${t.showTags?'checked':''}> Schlagworte</label></div>
       </div>
       <div class="panel" style="display:flex;flex-direction:column;gap:8px">
-        <p class="lbl" style="margin:0">Bereiche &amp; Reihenfolge</p><p class="muted" style="margin:0 0 4px;font-size:13px">Haken = wird angezeigt. Überschriften kannst du umbenennen.</p>
+        <p class="lbl" style="margin:0">Bereiche &amp; Reihenfolge</p><p class="muted" style="margin:0 0 4px;font-size:13px">Haken = wird angezeigt. Position und Größe änderst du direkt in der Vorschau: Bereich antippen.</p>
         ${secRows}
         <div style="border-top:1px solid var(--line);margin-top:8px;padding-top:12px;display:flex;flex-direction:column;gap:8px">
           ${t.customFields.length&&!t._unsaved?fillBoxHtml(t):''}
@@ -906,10 +970,10 @@ function viewTemplates(){
         <p class="muted" style="margin:0;font-size:12.5px">Umbenennen gilt auch für die Rezepte darin. Kategorien mit Rezepten lassen sich nicht löschen.</p>
       </div>
     </div>
-    <div class="tprev" style="min-width:0">${S.tplRef&&S.tplDraft&&S.tplRef.id===S.tplDraft.id?`<div class="refimg"><button data-act="zoom" data-src="${esc(S.tplRef.url)}"><img src="${esc(S.tplRef.url)}" alt="Vorbild"></button><span>Vorbild. Passe Farben, Schrift und Bereiche links an, bis es dir gefällt. Alles wird automatisch gespeichert.</span></div>`:''}<div class="pv-label"><span>Vorschau mit</span><select class="inp" id="tplPreviewSel" style="width:auto;padding:5px 8px">${pvOpts}</select>${pvRec===DEMO?'<span>(Beispiel)</span>':''}<span class="spacer"></span><span>${usage} Rezept(e) nutzen diese Vorlage</span></div><div id="tplPreview">${previewHtml(withPlaceholders(pvRec,normTpl(t)),normTpl(t))}</div></div>
+    <div class="tprev" style="min-width:0">${S.tplRef&&S.tplDraft&&S.tplRef.id===S.tplDraft.id?`<div class="refimg"><button data-act="zoom" data-src="${esc(S.tplRef.url)}"><img src="${esc(S.tplRef.url)}" alt="Vorbild"></button><span>Vorbild. Passe Farben, Schrift und Bereiche links an, bis es dir gefällt. Alles wird automatisch gespeichert.</span></div>`:''}<div class="pv-label"><span>Vorschau mit</span><select class="inp" id="tplPreviewSel" style="width:auto;padding:5px 8px">${pvOpts}</select>${pvRec===DEMO?'<span>(Beispiel)</span>':''}<span class="spacer"></span><span>${usage} Rezept(e) nutzen diese Vorlage</span></div><div id="lbarBox">${layoutBarHtml()}</div><div id="tplPreview">${previewHtml(editSample(withPlaceholders(pvRec,normTpl(t))),{...normTpl(t),_edit:true})}</div></div>
   </div>`;
 }
-function refreshTplPreview(){const box=$('#tplPreview');if(!box)return;const pv=S.recipes.find(r=>r.id===S.tplPreviewId)||S.recipes[0]||DEMO;const nt=normTpl(S.tplDraft);box.innerHTML=previewHtml(withPlaceholders(pv,nt),nt);mountPreviews();}
+function refreshTplPreview(){const box=$('#tplPreview');if(!box)return;const pv=S.recipes.find(r=>r.id===S.tplPreviewId)||S.recipes[0]||DEMO;const nt=normTpl(S.tplDraft);box.innerHTML=previewHtml(editSample(withPlaceholders(pv,nt)),{...nt,_edit:true});const lb=$('#lbarBox');if(lb)lb.innerHTML=layoutBarHtml();mountPreviews();}
 function tplChanged(full){S.tplDirty=true;S.tplVer=(S.tplVer||0)+1;clearTimeout(S.tplSaveT);S.tplSaveT=setTimeout(()=>saveTpl(true),900);if(full){const y=scrollY;render();scrollTo({top:y});}else{refreshTplPreview();}updateTplSaveUi();}
 
 /* ---------- Auslesen mit Claude ---------- */
@@ -1129,7 +1193,7 @@ async function buildPages(list){
       toast(list.length>1?`Seiten werden vorbereitet … ${i+1} von ${list.length}`:'Seiten werden vorbereitet …','',true);
       const r=list[i],t=tplById(r.templateId),P=PAPER[t.paper]||PAPER.A4;
       host.innerHTML=renderSheet(r,t);let el=host.firstElementChild;await hydrate(el);await waitImgs(el);
-      el=fitSheet(el,P,t.fit||'pages',t.fontScale,t.fit==='cols'&&t.columns===1?renderSheet(r,{...t,columns:2}):'',host);await hydrate(el);await waitImgs(el);
+      el=fitSheet(el,P,t.fit||'pages',t.fontScale,t.fit==='cols'&&isSingleCol(t.layout)?renderSheet(r,{...t,_alt2:true}):'',host);await hydrate(el);await waitImgs(el);
       const segs=pageSegments(el,P);const bg=sheetBg(el);
       const canvas=await html2canvas(el,{scale:2,backgroundColor:null,logging:false,useCORS:true});
       for(const img of sliceCanvas(canvas,P,segs,bg))pages.push({img,P});
@@ -1180,7 +1244,7 @@ function showFileSheet(filename,blob,title){
 const downloads={save:async({filename,data})=>{showFileSheet(filename,data instanceof Blob?data:new Blob([data]),'Datei ist fertig');return {status:'saved'};}};
 
 /* ---------- Vorlagen speichern ---------- */
-function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,fit:n.fit,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,titleFont:n.titleFont,paperColor:n.paperColor,createdAt:n.createdAt||Date.now()};}
+function tplBody(t){const n=normTpl(t);return {name:n.name.trim()||'Vorlage',style:n.style,columns:n.columns,paper:n.paper,accent:n.accent,fontScale:n.fontScale,fit:n.fit,layout:n.layout,showCategory:n.showCategory,showTags:n.showTags,customFields:n.customFields,sections:n.sections,titleFont:n.titleFont,paperColor:n.paperColor,createdAt:n.createdAt||Date.now()};}
 async function saveTpl(silent){
   clearTimeout(S.tplSaveT);S.tplSaveT=null;
   const t=S.tplDraft;if(!t||!db)return;const ver=S.tplVer||0;const wasNew=!!t._unsaved;
@@ -1387,11 +1451,15 @@ ${t.customFields.length?'- extra: '+t.customFields.map(f=>`"${f.key}" = ${f.labe
 
 /* ---------- Ereignisse ---------- */
 document.addEventListener('click',async ev=>{
+  if(S.view==='templates'&&!ev.target.closest('[data-act]')){const ls=ev.target.closest('#tplPreview .lsec');if(ls){if(S.dragJustEnded){S.dragJustEnded=false;return;}S.selSec=ls.dataset.sk;refreshTplPreview();return;}}
   const b=ev.target.closest('[data-act]');if(!b)return;
   const a=b.dataset.act,i=+b.dataset.i;
   switch(a){
     case 'nav': go(b.dataset.view);break;
     case 'cat': S.cat=b.dataset.cat;render();break;
+    case 'sel-sec': S.selSec=b.dataset.k;{const sc=S.tplDraft&&S.tplDraft.sections.find(x=>x.key===S.selSec);if(sc&&!sc.on){sc.on=true;tplChanged(true);}else refreshTplPreview();}setTimeout(()=>{const e=$('#lbarBox');if(e)e.scrollIntoView({block:'start',behavior:'smooth'});},60);break;
+    case 'lay': layOp(b.dataset.op);break;
+    case 'lay-close': S.selSec=null;refreshTplPreview();break;
     case 'rate': {const r=S.recipes.find(x=>x.id===S.openId);if(!r)break;const v=+b.dataset.v;const nv=(+r.rating||0)===v?0:v;r.rating=nv;render();try{await db.collection('recipes').doc(r.id).update({rating:nv});}catch(_){}break;}
     case 'reviewed': {const r=S.recipes.find(x=>x.id===S.openId);if(!r)break;r.review=false;render();try{await db.collection('recipes').doc(r.id).update({review:false});}catch(_){}break;}
     case 'cat-new-go': go('templates');setTimeout(()=>{const i=$('#cat-new');if(i){i.scrollIntoView({block:'center'});i.focus();}},80);break;
@@ -1449,7 +1517,7 @@ document.addEventListener('click',async ev=>{
     case 'p-idea': await pantryIdea();break;
     /* Vorlagen */
     case 'tpl-pick': {flushTplSave();const t=tplById(b.dataset.id);S.tplDraft=clone(t);S.tplOrig=clone(t);S.tplEditId=t.id;S.tplDirty=false;S.confirm=null;render();break;}
-    case 'tpl-set': {const k=b.dataset.k;let v=b.dataset.v;if(k==='columns')v=+v;if(k==='fontScale')v=+v;S.tplDraft[k]=v;tplChanged(true);break;}
+    case 'tpl-set': {const k=b.dataset.k;let v=b.dataset.v;if(k==='columns'){v=+v;S.tplDraft.layout=null;S.tplDraft.sections.forEach(x=>{const d=BASE_SECTIONS.find(y=>y.key===x.key);x.col=d?d.col:'a';});}if(k==='fontScale')v=+v;S.tplDraft[k]=v;tplChanged(true);break;}
     case 'sec-up': case 'sec-down': {const L=S.tplDraft.sections,j=a==='sec-up'?i-1:i+1;if(L[j]){[L[i],L[j]]=[L[j],L[i]];tplChanged(true);}break;}
     case 'fill-run': await fillFieldsForTemplate();break;
     case 'complete-run': await completeAll();break;
@@ -2269,6 +2337,81 @@ async function completeAll(){
   J.running=false;J.err=!!errMsg;J.msg=errMsg||(J.stop?`Gestoppt. ${changed} Rezept(e) ergänzt.`:`Fertig. ${changed} von ${J.total} Rezept(en) ergänzt.`);
   render();
 }
+
+/* ---------- Layout-Editor ---------- */
+function secLabel(k){const sc=S.tplDraft&&S.tplDraft.sections.find(x=>x.key===k);return sc?(sc.label||(BASE_SECTIONS.find(b=>b.key===k)||{}).label||k):k;}
+function layoutBarHtml(){
+  if(S.view!=='templates')return '';
+  if(!S.selSec||!S.tplDraft||!S.tplDraft.sections.some(x=>x.key===S.selSec&&x.on))return `<p class="lhint">Tipp: Tippe in der Vorschau auf einen Bereich, um ihn zu verschieben oder seine Größe zu ändern. Am Computer kannst du ausgewählte Bereiche auch ziehen und die Spaltengrenze mit der Maus verschieben.</p>`;
+  const sc=S.tplDraft.sections.find(x=>x.key===S.selSec);const L=normTpl(S.tplDraft).layout;const p=locate(L,S.selSec);const multi=p&&L[p.r].cols.length>1;
+  const ib=(op,txt,title,dis)=>`<button class="ib" data-act="lay" data-op="${op}" title="${title}" aria-label="${title}" ${dis?'disabled':''}>${txt}</button>`;
+  return `<div class="lbar"><b>${esc(secLabel(S.selSec))}</b>
+    ${ib('up','↑','Nach oben')}${ib('down','↓','Nach unten')}${ib('left','←','In die linke Spalte')}${ib('right','→','In die rechte Spalte')}${ib('row','⤓','Eigene Zeile über ganze Breite')}
+    <span class="sep"></span>${ib('narrower','⇤','Spalte schmaler',!multi)}${ib('wider','⇥','Spalte breiter',!multi)}
+    <span class="sep"></span>${ib('smaller','A−',S.selSec==='photo'?'Foto kleiner':'Schrift kleiner',(+sc.size||1)<=(S.selSec==='photo'?0.4:0.8))}${ib('bigger','A+',S.selSec==='photo'?'Foto größer':'Schrift größer',(+sc.size||1)>=(S.selSec==='photo'?1:1.5))}
+    <span class="sep"></span>${ib('hide','✕','Ausblenden')}<span class="spacer"></span><button class="btn sm ghost" data-act="lay-close">Fertig</button></div>`;
+}
+function locate(L,k){for(let r=0;r<L.length;r++)for(let c=0;c<L[r].cols.length;c++){const i=L[r].cols[c].items.indexOf(k);if(i>=0)return {r,c,i};}return null;}
+function isOn(k){const sc=S.tplDraft.sections.find(x=>x.key===k);return !!(sc&&sc.on);}
+function layOp(op){
+  const T=S.tplDraft;if(!T||!S.selSec)return;const k=S.selSec;
+  const L=normTpl(T).layout;const p=locate(L,k);if(!p)return;const row=L[p.r],col=row.cols[p.c];
+  const removeK=()=>{col.items.splice(col.items.indexOf(k),1);};
+  const sc=T.sections.find(x=>x.key===k);
+  if(op==='up'||op==='down'){
+    const dir=op==='up'?-1:1;let j=p.i+dir;while(j>=0&&j<col.items.length&&!isOn(col.items[j]))j+=dir;
+    if(j>=0&&j<col.items.length){col.items.splice(p.i,1);col.items.splice(j,0,k);}
+    else{const nr=p.r+dir;removeK();
+      if(nr<0)L.unshift({cols:[{w:100,items:[k]}]});
+      else if(nr>=L.length)L.push({cols:[{w:100,items:[k]}]});
+      else{const tr=L[nr];const tc=tr.cols[Math.min(p.c,tr.cols.length-1)];if(dir<0)tc.items.push(k);else tc.items.unshift(k);}}
+  }else if(op==='left'||op==='right'){
+    const tci=p.c+(op==='left'?-1:1);removeK();
+    if(tci>=0&&tci<row.cols.length){row.cols[tci].items.splice(Math.min(p.i,row.cols[tci].items.length),0,k);}
+    else{const others=row.cols.reduce((a,c)=>a+c.w,0);row.cols.forEach(c=>c.w=c.w/others*60);const nc={w:40,items:[k]};if(op==='left')row.cols.unshift(nc);else row.cols.push(nc);}
+  }else if(op==='row'){removeK();L.splice(p.r+1,0,{cols:[{w:100,items:[k]}]});}
+  else if(op==='wider'||op==='narrower'){
+    if(row.cols.length<2)return;const nb=p.c<row.cols.length-1?p.c+1:p.c-1;const d=op==='wider'?5:-5;
+    const a=Math.max(15,Math.min(85,col.w+d));const diff=a-col.w;row.cols[nb].w=Math.max(15,row.cols[nb].w-diff);col.w=a;
+  }else if(op==='bigger'||op==='smaller'){
+    const isP=k==='photo';const step=0.1*(op==='bigger'?1:-1);sc.size=Math.round(Math.max(isP?0.4:0.8,Math.min(isP?1:1.5,(+sc.size||1)+step))*10)/10;
+  }else if(op==='hide'){sc.on=false;S.selSec=null;}
+  T.layout=normLayout(L,T);
+  tplChanged(false);refreshTplPreview();
+}
+/* Ziehen: Spaltenbreite und Bereiche verschieben */
+document.addEventListener('pointerdown',ev=>{
+  if(S.view!=='templates'||!S.tplDraft)return;
+  const dv=ev.target.closest('#tplPreview .ldiv');
+  if(dv){ev.preventDefault();const rowEl=dv.parentElement;const rw=rowEl.getBoundingClientRect().width;const L=normTpl(S.tplDraft).layout;const row=L[+dv.dataset.row];if(!row)return;
+    const a=+dv.dataset.a,b=+dv.dataset.b;const wa=row.cols[a].w,wb=row.cols[b].w;const x0=ev.clientX;dv.classList.add('on');
+    const mv=e=>{const d=(e.clientX-x0)/rw*(wa+wb>0?100:100);let na=Math.max(15,Math.min(wa+wb-15,wa+d));row.cols[a].w=na;row.cols[b].w=wa+wb-na;
+      S.tplDraft.layout=L;const box=$('#tplPreview');if(box){const nt=normTpl(S.tplDraft);clearTimeout(S.lvT);S.lvT=setTimeout(()=>{box.innerHTML=previewHtml(editSample(withPlaceholders(S.recipes.find(r=>r.id===S.tplPreviewId)||S.recipes[0]||DEMO,nt)),{...nt,_edit:true});mountPreviews();},16);}};
+    const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);S.tplDraft.layout=normLayout(L,S.tplDraft);tplChanged(false);refreshTplPreview();};
+    addEventListener('pointermove',mv);addEventListener('pointerup',up);addEventListener('pointercancel',up);return;}
+  const ls=ev.target.closest('#tplPreview .lsec.sel');if(!ls)return;
+  const k=ls.dataset.sk;const x0=ev.clientX,y0=ev.clientY;let dragging=false,target=null;
+  const line=document.createElement('div');line.id='dropLine';
+  const mv=e=>{
+    if(!dragging){if(Math.hypot(e.clientX-x0,e.clientY-y0)<8)return;dragging=true;$$('#tplPreview .lsec[data-sk="'+k+'"]').forEach(x=>x.classList.add('drag'));document.body.appendChild(line);}
+    e.preventDefault();
+    const els=document.elementsFromPoint(e.clientX,e.clientY);const col=els.map(x=>x.closest&&x.closest('#tplPreview .lcol')).find(Boolean);
+    if(!col){line.hidden=true;target=null;return;}
+    const secs=$$(':scope > .lsec',col).filter(x=>x.dataset.sk!==k);let before=null;
+    for(const sEl of secs){const r=sEl.getBoundingClientRect();if(e.clientY<r.top+r.height/2){before=sEl;break;}}
+    const cr=col.getBoundingClientRect();let y;
+    if(before)y=before.getBoundingClientRect().top-6;else{const last=secs[secs.length-1];y=last?last.getBoundingClientRect().bottom+4:cr.top+4;}
+    line.hidden=false;line.style.left=cr.left+'px';line.style.width=cr.width+'px';line.style.top=y+'px';
+    target={row:+col.dataset.row,col:+col.dataset.col,before:before?before.dataset.sk:null};
+  };
+  const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);line.remove();
+    if(!dragging)return;S.dragJustEnded=true;setTimeout(()=>{S.dragJustEnded=false;},300);
+    if(target){const L=normTpl(S.tplDraft).layout;const p=locate(L,k);if(p){L[p.r].cols[p.c].items.splice(p.i,1);const tc=L[target.row]&&L[target.row].cols[target.col];
+      if(tc){let idx=target.before?tc.items.indexOf(target.before):tc.items.length;if(idx<0)idx=tc.items.length;tc.items.splice(idx,0,k);}else L[p.r].cols[p.c].items.splice(p.i,0,k);
+      S.tplDraft.layout=normLayout(L,S.tplDraft);tplChanged(false);}}
+    refreshTplPreview();};
+  addEventListener('pointermove',mv,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up);
+});
 
 /* ---------- Kategorien umstellen (einmalig) ---------- */
 let catMigRun=false,catMigAgain=false;

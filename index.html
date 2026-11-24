@@ -604,7 +604,7 @@ const QTY_RE=new RegExp(`^((?:ca\\.?\\s*)?${NUM}(?:\\s*[-–]\\s*${NUM})?(?:\\s*
 
 /* ---------- Zustand ---------- */
 const S={recipes:[],templates:[],settings:{categories:DEFAULT_CATS.slice(),defaultTemplateId:null},loaded:false,noDb:false,
-  view:'library',cat:'alle',q:'',sort:'name',openId:null,confirm:null,draft:null,
+  view:'library',cat:'alle',cats:[],starF:[],q:'',sort:'name',openId:null,confirm:null,draft:null,
   upload:{files:[],tplId:null,cat:'auto',translate:true,text:''},extract:null,
   tplEditId:null,tplDraft:null,tplDirty:false,tplPreviewId:null,busy:false,backTo:'library',
   pantry:{items:[],staples:true,filter:'all',ai:null,busy:null,msg:'',focus:false}};
@@ -875,7 +875,13 @@ const TRY_TAG='Ausprobieren';
 const isTryTag=t=>String(t||'').trim().toLowerCase()===TRY_TAG.toLowerCase();
 const isTry=r=>(r.tags||[]).some(isTryTag);
 function withTry(tags,on){const L=(tags||[]).filter(t=>!isTryTag(t));return on?L.concat(TRY_TAG):L;}
-function starOk(r){const v=+r.rating||0,m=/^s([1-5])$/.exec(S.sort||'');if(m)return v===+m[1];return S.sort!=='unbew'||!v;}
+function starOk(r){return !S.starF.length||S.starF.includes(+r.rating||0);}
+const catOk=r=>!S.cats.length||S.cats.includes(r.category);
+function syncCat(){S.cat=S.cats.length===1?S.cats[0]:'alle';}
+const onlyOneCat=()=>S.cats.length===1&&!S.q&&!S.starF.length&&S.tab!=='try';
+const pdfLabel=n=>!anyFilter()?'Alle als PDF-Heft':onlyOneCat()?'„'+esc(S.cat)+'“ als PDF-Heft':n+' Rezept'+(n===1?'':'e')+' als PDF-Heft';
+const fInfo=n=>anyFilter()?`<span class="muted" style="font-size:14px">${n} Treffer</span><button class="btn sm ghost" data-act="filter-reset">Filter zurücksetzen</button>`:'';
+const anyFilter=()=>!!(S.q||S.starF.length||S.cats.length||S.tab==='try');
 function libBase(){const ok=r=>matchesQ(r)&&starOk(r)&&(S.tab!=='try'||isTry(r));
   const kids=new Map();for(const r of S.recipes){const p=parentOf(r);if(p){if(!kids.has(p.id))kids.set(p.id,[]);kids.get(p.id).push(r);}}
   return S.recipes.filter(r=>!parentOf(r)&&(ok(r)||(kids.get(r.id)||[]).some(ok)));}
@@ -995,7 +1001,7 @@ function printDlg(kind,list,opt={}){
     close();run(L,short);});
   document.body.appendChild(el);
 }
-function filtersOn(){return !!(S.q||S.sort==='unbew'||/^s\d$/.test(S.sort||'')||S.tab==='try');}
+function filtersOn(){return !!(S.q||S.starF.length||S.tab==='try'||S.cats.length>1);}
 function sortRecipes(L){
   const order=new Map(cats().map((c,i)=>[c,i]));
   return L.slice().sort((a,b)=>S.sort==='neu'?(b.createdAt||0)-(a.createdAt||0):S.sort==='sterne'?((+b.rating||0)-(+a.rating||0))||coll.compare(a.title||'',b.title||''):coll.compare(a.title||'',b.title||''));
@@ -1014,31 +1020,32 @@ function libResults(){
   const L=sortRecipes(libBase());
   if(!S.loaded)return `<p class="muted">Rezepte werden geladen …</p>`;
   if(!S.recipes.length)return `<div class="empty"><p class="h2">Noch keine Rezepte in der Kartei</p><p class="muted">Lade einen Screenshot hoch, die App liest Zutaten und Schritte heraus und trägt sie in deine Vorlage ein.</p><p style="margin-top:14px"><button class="btn primary" data-act="nav" data-view="upload">Erstes Rezept einlesen</button></p></div>`;
-  if(S.cat!=='alle'){
-    const sub=L.filter(r=>r.category===S.cat);
-    return sub.length?`<div class="cards">${sub.map(cardHtml).join('')}</div>`:`<div class="empty"><p class="h2">${filtersOn()?'Keine Treffer':'Noch nichts in „'+esc(S.cat)+'“'}</p><p class="muted">${filtersOn()?'Versuche einen anderen Suchbegriff oder Filter.':'Neue Rezepte landen hier, sobald du sie dieser Kategorie zuordnest.'}</p></div>`;
+  if(S.cats.length){
+    const sub=L.filter(catOk);
+    return sub.length?`<div class="cards">${sub.map(cardHtml).join('')}</div>`:`<div class="empty"><p class="h2">${filtersOn()?'Keine Treffer':(S.cats.length>1?'Keine Rezepte in diesen Kategorien':'Noch nichts in „'+esc(S.cat)+'“')}</p><p class="muted">${filtersOn()?'Versuche einen anderen Suchbegriff oder Filter.':'Neue Rezepte landen hier, sobald du sie dieser Kategorie zuordnest.'}</p></div>`;
   }
   const html=L.length?`<div class="cards">${L.map(cardHtml).join('')}</div>`:'';
-  return html||`<div class="empty"><p class="h2">Keine Treffer</p><p class="muted">${S.tab==='try'&&!S.q&&S.sort!=='unbew'?'Keine Rezepte mit der Markierung „Noch ausprobieren“. Du kannst Rezepte in der Detailansicht markieren.':'Versuche einen anderen Suchbegriff oder Filter.'}</p></div>`;
+  return html||`<div class="empty"><p class="h2">Keine Treffer</p><p class="muted">${S.tab==='try'&&!S.q&&!S.starF.length?'Keine Rezepte mit der Markierung „Noch ausprobieren“. Du kannst Rezepte in der Detailansicht markieren.':'Versuche einen anderen Suchbegriff oder Filter.'}</p></div>`;
 }
 function viewLibrary(){
   const base=libBase();const counts=new Map();for(const r of base)counts.set(r.category,(counts.get(r.category)||0)+1);
   const nTry=S.recipes.filter(isTry).length;
-  const nav=[`<button class="catbtn all" data-act="cat" data-cat="alle" aria-current="${S.cat==='alle'}">Alle<span class="n">${base.length}</span></button>`]
-    .concat(cats().map(c=>`<button class="catbtn" data-act="cat" data-cat="${esc(c)}" aria-current="${S.cat===c}" style="--h:${hueOf(c)}"><span class="dot"></span>${esc(c)}<span class="n">${counts.get(c)||0}</span></button>`)).concat(['<button class="catbtn" data-act="cat-new-go" style="border-style:dashed;color:var(--muted)">+ Kategorie</button>']).join('');
+  const nav=[`<button class="catbtn all" data-act="cat" data-cat="alle" aria-current="${!S.cats.length}">Alle<span class="n">${base.length}</span></button>`]
+    .concat(cats().map(c=>`<button class="catbtn" data-act="cat" data-cat="${esc(c)}" aria-current="${S.cats.includes(c)}" style="--h:${hueOf(c)}"><span class="dot"></span>${esc(c)}<span class="n">${counts.get(c)||0}</span></button>`)).concat(['<button class="catbtn" data-act="cat-new-go" style="border-style:dashed;color:var(--muted)">+ Kategorie</button>']).join('');
   const nVis=visibleForPdf().length;
   return `<div class="lib"><div class="libbar"><input class="inp" id="q" type="search" placeholder="Suchen: Titel, Zutat, Schlagwort …" value="${esc(S.q)}" aria-label="Rezepte durchsuchen">
-    <select class="inp" id="sortSel" style="width:auto" aria-label="Sortieren und filtern">${(()=>{const o=([v,l])=>`<option value="${v}" ${(S.sort||'name')===v?'selected':''}>${l}</option>`;const n=k=>S.recipes.filter(r=>!parentOf(r)&&(+r.rating||0)===k).length;
-      return `<optgroup label="Sortieren">${[['name','A–Z'],['neu','Neueste zuerst'],['sterne','Beste Bewertung zuerst']].map(o).join('')}</optgroup><optgroup label="Nach Sternen filtern">${[5,4,3,2,1].map(k=>o(['s'+k,'★'.repeat(k)+'☆'.repeat(5-k)+' · '+n(k)])).join('')}${o(['unbew','Unbewertet · '+n(0)])}</optgroup>`;})()}</select>
-    <span class="spacer"></span><button class="btn" data-act="pdf-list" ${nVis?'':'disabled'} id="pdfListBtn">${S.cat==='alle'?'Alle als PDF-Heft':'„'+esc(S.cat)+'“ als PDF-Heft'}</button>
+    <select class="inp" id="sortSel" style="width:auto" aria-label="Sortierung">${[['name','A–Z'],['neu','Neueste zuerst'],['sterne','Beste Bewertung zuerst']].map(([v,l])=>`<option value="${v}" ${(['neu','sterne'].includes(S.sort)?S.sort:'name')===v?'selected':''}>${l}</option>`).join('')}</select>
+    <span class="spacer"></span><button class="btn" data-act="pdf-list" ${nVis?'':'disabled'} id="pdfListBtn">${pdfLabel(nVis)}</button>
     <button class="btn primary" data-act="nav" data-view="upload">+ Rezept einlesen</button></div>
     ${backupNote()}
     ${(()=>{if(S.dupHide||!canWrite)return '';const n=dupGroups().length;return n?`<div class="note row" style="gap:10px"><span>Es gibt ${n} Gruppe${n>1?'n':''} mit doppelten oder sehr ähnlichen Rezepten. Du kannst sie als Hauptrezept mit Varianten zusammenführen.</span><span class="spacer"></span><button class="btn sm ghost" data-act="dup-hide">Später</button><button class="btn sm primary" data-act="nav" data-view="dups">Ansehen</button></div>`:'';})()}
-    <div class="libbar"><div class="seg" role="group" aria-label="Ansicht"><button data-act="lib-tab" data-v="all" aria-pressed="${S.tab!=='try'}">Alle Rezepte</button><button data-act="lib-tab" data-v="try" aria-pressed="${S.tab==='try'}">Noch ausprobieren · ${nTry}</button></div></div>
+    <div class="libbar"><div class="seg" role="group" aria-label="Ansicht"><button data-act="lib-tab" data-v="all" aria-pressed="${S.tab!=='try'}">Alle Rezepte</button><button data-act="lib-tab" data-v="try" aria-pressed="${S.tab==='try'}">Noch ausprobieren · ${nTry}</button></div>
+      <div class="seg stars-f" role="group" aria-label="Nach Sternen filtern (mehrere möglich)">${(()=>{const n=k=>S.recipes.filter(r=>!parentOf(r)&&(+r.rating||0)===k).length;return [5,4,3,2,1,0].map(k=>`<button data-act="star-f" data-v="${k}" aria-pressed="${S.starF.includes(k)}" title="${k?k+' Stern'+(k>1?'e':''):'Noch unbewertet'}">${k} ★ · ${n(k)}</button>`).join('');})()}</div>
+      <span class="row" id="fInfo" style="gap:8px">${fInfo(nVis)}</span></div>
     <nav class="catnav" aria-label="Kategorien">${nav}</nav>
     <div id="libResults">${libResults()}</div></div>`;
 }
-function visibleForPdf(){const L=sortRecipes(libBase());const ordered=S.cat==='alle'?cats().flatMap(c=>L.filter(r=>r.category===c)).concat(L.filter(r=>!cats().includes(r.category))):L.filter(r=>r.category===S.cat);return ordered;}
+function visibleForPdf(){const L=sortRecipes(libBase()).filter(catOk);return S.cats.length===1?L:cats().flatMap(c=>L.filter(r=>r.category===c)).concat(L.filter(r=>!cats().includes(r.category)));}
 
 /* Detail */
 function viewDetail(){
@@ -1712,7 +1719,9 @@ document.addEventListener('click',async ev=>{
   const a=b.dataset.act,i=+b.dataset.i;
   switch(a){
     case 'nav': go(b.dataset.view);break;
-    case 'cat': S.cat=b.dataset.cat;render();break;
+    case 'cat': {const c=b.dataset.cat;if(c==='alle')S.cats=[];else S.cats=S.cats.includes(c)?S.cats.filter(x=>x!==c):S.cats.concat(c);syncCat();render();break;}
+    case 'star-f': {const v=+b.dataset.v;S.starF=S.starF.includes(v)?S.starF.filter(x=>x!==v):S.starF.concat(v);render();break;}
+    case 'filter-reset': S.cats=[];S.starF=[];S.q='';S.tab='all';syncCat();render();break;
     case 'lib-tab': S.tab=b.dataset.v;render();break;
     case 'try-toggle': {const r=S.recipes.find(x=>x.id===S.openId);if(!r)break;const on=!isTry(r);const tags=withTry(r.tags,on);r.tags=tags;render();try{await db.collection('recipes').doc(r.id).update({tags});toast(on?'Als „Noch ausprobieren“ markiert.':'Markierung entfernt.');}catch(_){toast('Speichern hat nicht geklappt.','err');}break;}
     case 'ed-try': {const d=S.draft;if(!d)break;d.tags=withTry(d.tags,!isTry(d));const y=scrollY;render();scrollTo({top:y});break;}
@@ -1730,7 +1739,7 @@ document.addEventListener('click',async ev=>{
     case 'del-rec': await deleteRecipe();break;
     case 'print-one': {const r=S.recipes.find(x=>x.id===S.openId);if(r)printDlg('print',[r]);break;}
     case 'pdf-one': {const r=S.recipes.find(x=>x.id===S.openId);if(r)printDlg('pdf',[r]);break;}
-    case 'pdf-list': {const L=visibleForPdf();if(L.length)printDlg('pdf',L,{heft:true,filename:(S.cat==='alle'?'Rezeptkartei':'Rezepte '+safeName(S.cat))+'.pdf'});break;}
+    case 'pdf-list': {const L=visibleForPdf();if(L.length)printDlg('pdf',L,{heft:true,filename:(!anyFilter()?'Rezeptkartei':onlyOneCat()?'Rezepte '+safeName(S.cat):'Rezepte Auswahl')+'.pdf'});break;}
     case 'dup-hide': S.dupHide=true;render();break;
     case 'dup-link': case 'dup-ignore': {const G=dupGroups()[i];const sec=b.closest('.dgroup');if(!G||!sec)break;
       const inc=$$('.dinc',sec).filter(x=>x.checked).map(x=>x.value);const exc=G.map(r=>r.id).filter(id=>!inc.includes(id));
@@ -1815,13 +1824,13 @@ document.addEventListener('click',async ev=>{
     case 'tpl-del': {const id=S.tplDraft.id;try{await db.collection('templates').doc(id).delete();S.templates=S.templates.filter(t=>t.id!==id);if(S.settings.defaultTemplateId===id)await saveSettings({defaultTemplateId:null});S.tplDraft=null;S.tplEditId=null;S.confirm=null;toast('Vorlage gelöscht.');render();}catch(e){toast('Löschen hat nicht geklappt.','err');}break;}
     /* Kategorien */
     case 'cat-up': case 'cat-down': {const L=cats().slice(),j=a==='cat-up'?i-1:i+1;if(L[j]){[L[i],L[j]]=[L[j],L[i]];await saveSettings({categories:L});render();}break;}
-    case 'cat-del': {const L=cats().slice();const c=L[i];if(S.recipes.some(r=>r.category===c))break;L.splice(i,1);if(S.cat===c)S.cat='alle';await saveSettings({categories:L});render();break;}
+    case 'cat-del': {const L=cats().slice();const c=L[i];if(S.recipes.some(r=>r.category===c))break;L.splice(i,1);S.cats=S.cats.filter(x=>x!==c);syncCat();await saveSettings({categories:L});render();break;}
     case 'cat-add': {const v=$('#cat-new').value.trim();if(!v)break;if(cats().some(c=>c.toLowerCase()===v.toLowerCase())){toast('Diese Kategorie gibt es schon.','err');break;}await saveSettings({categories:[...cats(),v]});render();break;}
   }
 });
 document.addEventListener('input',ev=>{
   const el=ev.target;
-  if(el.id==='q'){S.q=el.value;const box=$('#libResults');if(box)box.innerHTML=libResults();const pb=$('#pdfListBtn');if(pb)pb.disabled=!visibleForPdf().length;return;}
+  if(el.id==='q'){S.q=el.value;const box=$('#libResults');if(box)box.innerHTML=libResults();const nv=visibleForPdf().length,pb=$('#pdfListBtn');if(pb){pb.disabled=!nv;pb.textContent=pdfLabel(nv).replace(/&quot;|&amp;/g,m=>m==='&amp;'?'&':'"');}const fi=$('#fInfo');if(fi)fi.innerHTML=fInfo(nv);return;}
   if(el.id==='u-text'){S.upload.text=el.value;return;}
   if(el.id==='pin'&&/[,;\n]/.test(el.value)){const parts=el.value.split(/[,;\n]/);el.value=parts.pop();addPantry(parts.join(','),true);return;}
   if(el.dataset.f&&S.draft){
@@ -1863,7 +1872,7 @@ document.addEventListener('change',async ev=>{
     const L=cats().slice();L[i]=nv;await saveSettings({categories:L});
     const affected=S.recipes.filter(r=>r.category===old);
     for(const r of affected){try{await db.collection('recipes').doc(r.id).update({category:nv});r.category=nv;}catch(_){}}
-    if(S.cat===old)S.cat=nv;toast(affected.length?`Umbenannt, ${affected.length} Rezept(e) angepasst.`:'Kategorie umbenannt.');render();
+    S.cats=S.cats.map(x=>x===old?nv:x);syncCat();toast(affected.length?`Umbenannt, ${affected.length} Rezept(e) angepasst.`:'Kategorie umbenannt.');render();
   }
 });
 document.addEventListener('keydown',ev=>{if(ev.target.id==='pin'){if(ev.key==='Enter'||ev.key===','){ev.preventDefault();addPantry(ev.target.value);return;}if(ev.key==='Backspace'&&!ev.target.value&&S.pantry.items.length){S.pantry.items.pop();S.pantry.ai=null;savePantry();S.pantry.focus=true;render();return;}}if(ev.key==='Escape'){const lb=$('.lightbox');if(lb)lb.remove();closeSheet();}if(ev.key==='Enter'&&ev.target.id==='cat-new'){ev.preventDefault();$('[data-act="cat-add"]').click();}if(ev.key==='Enter'&&(ev.target.id==='cf-label'||ev.target.id==='cf-hint')){ev.preventDefault();$('[data-act="cf-add"]').click();}});

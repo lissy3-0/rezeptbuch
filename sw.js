@@ -1,5 +1,5 @@
 // Rezeptkartei – Offline-Cache
-const CORE = 'rk-core-v2';
+const CORE = 'rk-core-v3';
 const EXT = 'rk-ext';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 

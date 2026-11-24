@@ -868,7 +868,8 @@ function render(){
   mountPreviews();hydrate();
   if(S.view==='pantry'&&S.pantry.focus){S.pantry.focus=false;const i=$('#pin');if(i)i.focus();}
 }
-function go(view,extra={}){flushTplSave();Object.assign(S,{confirm:null},extra);S.view=view;render();scrollTo({top:0});}
+function go(view,extra={}){flushTplSave();const from=S.view;if(from==='library')S.libY=scrollY;Object.assign(S,{confirm:null},extra);S.view=view;render();
+  scrollTo({top:view==='library'&&['detail','editor','dups'].includes(from)?(S.libY||0):0});}
 
 /* Bibliothek */
 const TRY_TAG='Ausprobieren';
@@ -1441,7 +1442,7 @@ function sliceCanvas(canvas,P,segs,bg){
   return out;
 }
 const safeName=s=>String(s||'Rezept').replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,' ').trim().slice(0,80)||'Rezept';
-async function buildPages(list){
+async function buildPages(list,onPage){
   if(!window.html2canvas)throw {code:'nolib'};
   if(document.fonts)await document.fonts.ready;
   const host=$('#pdfHost');const pages=[];
@@ -1458,8 +1459,9 @@ async function buildPages(list){
         x.fillStyle=pl.bg[pg.s];x.fillRect(0,0,W,pageH);
         if(pg.cont&&cc)x.drawImage(cc,0,Math.round(pl.ct*k));
         const sy=Math.round(pg.a*k),sh=Math.min(src.height-sy,Math.round((pg.b-pg.a)*k));if(sh>0)x.drawImage(src,0,sy,W,sh,0,Math.round(pg.top*k),W,sh);
-        pages.push({img:pc.toDataURL('image/jpeg',.9),P});pc.width=pc.height=0;}
+        const pg1={img:pc.toDataURL('image/jpeg',.9),P};pc.width=pc.height=0;if(onPage)await onPage(pg1);else pages.push(pg1);}
       for(const c of cv)c.width=c.height=0;if(cc)cc.width=cc.height=0; /* Speicher sofort freigeben (iOS) */
+      await new Promise(r=>setTimeout(r,0));
     }
   }finally{host.innerHTML='';}
   return pages;
@@ -1469,11 +1471,11 @@ async function exportPdf(list,filename){
   if(S.busy)return;S.busy=true;
   try{
     if(!window.jspdf)throw {code:'nolib'};
-    const pages=await buildPages(list);let pdf=null;
-    for(const {img,P} of pages){
+    let pdf=null;
+    await buildPages(list,async({img,P})=>{
       if(!pdf)pdf=new window.jspdf.jsPDF({unit:'mm',format:P.fmt,orientation:P.o,compress:true});else pdf.addPage(P.fmt,P.o);
       pdf.addImage(img,'JPEG',0,0,P.mmW,P.mmH,undefined,'FAST');
-    }
+    });
     if(!pdf)throw {code:'empty'};
     pdf.setProperties({title:filename.replace(/\.pdf$/,''),creator:'Rezeptkartei'});
     hideToast();showFileSheet(filename,pdf.output('blob'),'PDF ist fertig');
@@ -1888,6 +1890,30 @@ document.addEventListener('drop',ev=>{const d=ev.target.closest&&ev.target.close
 
 /* ---------- Lokaler Speicher (IndexedDB) ---------- */
 function newId(){try{if(crypto.randomUUID)return crypto.randomUUID().replace(/-/g,'');}catch(_){}return Date.now().toString(36)+Math.random().toString(36).slice(2,10);}
+/* Zeitlimit: iOS/Safari beendet bei Speicherdruck (z.B. großer PDF-Export) den IndexedDB-Dienst; danach hängen Zugriffe ohne Fehler */
+function tmo(p,ms,what){return new Promise((res,rej)=>{const t=setTimeout(()=>rej(Object.assign(new Error(what+' timeout'),{name:'TimeoutError'})),ms);p.then(v=>{clearTimeout(t);res(v);},e=>{clearTimeout(t);rej(e);});});}
+/* Notablage: Schreibvorgänge, die der Gerätespeicher gerade nicht annimmt, landen hier und werden beim nächsten Start nachgetragen */
+const PQ_KEY='rk-pending';
+const PQ={load(){try{return JSON.parse(localStorage.getItem(PQ_KEY)||'[]');}catch(_){return [];}},
+  add(op){const L=PQ.load().filter(o=>!(o.s===op.s&&o.k===op.k));L.push(op);localStorage.setItem(PQ_KEY,JSON.stringify(L));}};
+const KEYPATH=st=>st==='recipes'||st==='templates';
+async function idbWrite(st,v,k,del){
+  try{if(del)await IDB.del(st,k);else await IDB.put(st,v,KEYPATH(st)?undefined:k);return true;}
+  catch(e){const n=(e&&e.name)||'';if(n==='QuotaExceededError'||n==='DataError'||n==='ConstraintError'||n==='DataCloneError')throw e;
+    const op={s:st,k:del?k:(KEYPATH(st)?v.id:k),del:!!del};
+    if(!del){if(v instanceof Blob){op.type=v.type;op.b64=await blobToB64(v);}else op.v=v;}
+    try{PQ.add(op);}catch(_){throw e;}
+    console.warn('Gerätespeicher nicht erreichbar, Notablage benutzt',e);scheduleHeal();return false;}}
+async function pqFlush(){const L=PQ.load();if(!L.length)return;const rest=[];
+  for(const o of L){try{if(o.del)await IDB.del(o.s,o.k);else{const v=o.b64!=null?dataURLToBlob(`data:${o.type||'image/jpeg'};base64,${o.b64}`):o.v;await IDB.put(o.s,v,KEYPATH(o.s)?undefined:o.k);}}catch(_){rest.push(o);}}
+  try{if(rest.length)localStorage.setItem(PQ_KEY,JSON.stringify(rest));else localStorage.removeItem(PQ_KEY);}catch(_){}}
+let healT=null;
+function scheduleHeal(){if(healT)return;
+  const tryIt=()=>{if(S.view==='editor'||S.busy||$('.sheet-ov')||SYNC.pending){healT=setTimeout(tryIt,1500);return;}
+    try{sessionStorage.setItem('rk-resume',JSON.stringify({view:S.view,openId:S.openId,backTo:S.backTo,libY:S.libY||0,y:scrollY}));}catch(_){}
+    location.reload();};
+  setTimeout(()=>toast('Gespeichert. Die App verbindet den Gerätespeicher kurz neu …','',true),900);
+  healT=setTimeout(tryIt,2500);}
 const IDB={db:null,
   open(){return new Promise((res,rej)=>{let r;try{r=indexedDB.open('rezeptkartei',1);}catch(e){rej(e);return;}
     r.onupgradeneeded=()=>{const d=r.result;for(const n of ['recipes','templates'])if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:'id'});for(const n of ['kv','images'])if(!d.objectStoreNames.contains(n))d.createObjectStore(n);};
@@ -1897,18 +1923,18 @@ const IDB={db:null,
       d.onversionchange=()=>{try{d.close();}catch(_){}if(IDB.db===d)IDB.db=null;};
       res();};r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error('IDB blockiert'));});},
   _opening:null,
-  async ensure(){if(IDB.db)return;if(!IDB._opening)IDB._opening=IDB.open().finally(()=>{IDB._opening=null;});await IDB._opening;},
+  async ensure(){if(IDB.db)return;if(!IDB._opening)IDB._opening=tmo(IDB.open(),6000,'open').finally(()=>{IDB._opening=null;});await IDB._opening;},
   _tx1(store,mode,fn){return new Promise((res,rej)=>{let t;try{t=IDB.db.transaction(store,mode);}catch(e){rej(e);return;}let q;try{q=fn(t.objectStore(store));}catch(e){rej(e);return;}let out;if(q)q.onsuccess=()=>{out=q.result;};t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('abort'));});},
   async tx(store,mode,fn){
     await IDB.ensure();
-    try{return await IDB._tx1(store,mode,fn);}
+    try{return await tmo(IDB._tx1(store,mode,fn),8000,'tx');}
     catch(e){
       const n=(e&&e.name)||'';
       if(e&&(n==='QuotaExceededError'||n==='DataError'||n==='ConstraintError'||n==='DataCloneError'))throw e;
       /* Verbindung tot (InvalidStateError, UnknownError, closing, null ...) -> neu verbinden, einmal wiederholen */
       try{IDB.db&&IDB.db.close();}catch(_){}
       IDB.db=null;await IDB.ensure();
-      return await IDB._tx1(store,mode,fn);
+      return await tmo(IDB._tx1(store,mode,fn),8000,'tx');
     }},
   all(st){return IDB.tx(st,'readonly',s=>s.getAll());},
   get(st,k){return IDB.tx(st,'readonly',s=>s.get(k));},
@@ -1921,13 +1947,13 @@ function settingsSnap(){return {id:'app',exists:!!Store.settings,data:()=>Store.
 function notify(key){for(const cb of Store.listeners[key]||[])try{cb(key==='settings/app'?settingsSnap():collSnap(key));}catch(e){console.error(e);}}
 function docRef(c,id){
   if(c==='settings')return {id,
-    async set(body){Store.settings=clone(body);await IDB.put('kv',Store.settings,'settings');syncPush('settings','app',Store.settings);notify('settings/app');},
-    async update(p){Store.settings={...(Store.settings||{}),...clone(p)};await IDB.put('kv',Store.settings,'settings');syncPush('settings','app',Store.settings);notify('settings/app');},
-    async delete(){Store.settings=null;await IDB.del('kv','settings');notify('settings/app');}};
+    async set(body){Store.settings=clone(body);await idbWrite('kv',Store.settings,'settings');syncPush('settings','app',Store.settings);notify('settings/app');},
+    async update(p){Store.settings={...(Store.settings||{}),...clone(p)};await idbWrite('kv',Store.settings,'settings');syncPush('settings','app',Store.settings);notify('settings/app');},
+    async delete(){Store.settings=null;await idbWrite('kv',null,'settings',true);notify('settings/app');}};
   return {id,
-    async set(body){const v={...clone(body),id};await IDB.put(c,v);Store[c].set(id,v);syncPush(c,id,v);notify(c);},
-    async update(p){const cur=Store[c].get(id);if(!cur)throw {code:'invalid_argument'};const v={...cur,...clone(p),id};await IDB.put(c,v);Store[c].set(id,v);syncPush(c,id,v);notify(c);},
-    async delete(){await IDB.del(c,id);Store[c].delete(id);syncPush(c,id,null);notify(c);}};
+    async set(body){const v={...clone(body),id};await idbWrite(c,v);Store[c].set(id,v);syncPush(c,id,v);notify(c);},
+    async update(p){const cur=Store[c].get(id);if(!cur)throw {code:'invalid_argument'};const v={...cur,...clone(p),id};await idbWrite(c,v);Store[c].set(id,v);syncPush(c,id,v);notify(c);},
+    async delete(){await idbWrite(c,null,id,true);Store[c].delete(id);syncPush(c,id,null);notify(c);}};
 }
 db={
   collection(name){return {doc:(id)=>docRef(name,id||newId()),onSnapshot(cb){Store.listeners[name].push(cb);setTimeout(()=>cb(collSnap(name)),0);return()=>{};}};},
@@ -1957,8 +1983,8 @@ async function shrinkImage(blob,maxW=1400){
     const out=await canvasBlob(c,'image/jpeg',.85);return out&&out.size<blob.size?out:blob;}catch(_){return blob;}
 }
 assets={
-  async upload(blob){const b=await shrinkImage(blob);const id=newId();await IDB.put('images',b,id);syncPushImage(id,b);const url=URL.createObjectURL(b);IMG.set(id,url);return {id,url,sizeBytes:b.size,contentType:b.type};},
-  async delete(id){await IDB.del('images',id);syncDelImage(id);const u=IMG.get(id);if(u)URL.revokeObjectURL(u);IMG.delete(id);return {deleted:true};},
+  async upload(blob){const b=await shrinkImage(blob);const id=newId();await idbWrite('images',b,id);syncPushImage(id,b);const url=URL.createObjectURL(b);IMG.set(id,url);return {id,url,sizeBytes:b.size,contentType:b.type};},
+  async delete(id){await idbWrite('images',null,id,true);syncDelImage(id);const u=IMG.get(id);if(u)URL.revokeObjectURL(u);IMG.delete(id);return {deleted:true};},
   async list(){return {assets:[],usage:{}};}
 };
 async function askPersist(force){try{if(!navigator.storage||!navigator.storage.persist)return;if(!force&&S.persistAsked)return;S.persistAsked=true;S.persisted=await navigator.storage.persist();}catch(_){}}
@@ -1970,7 +1996,7 @@ const FALLBACK_GEMINI='gemini-2.5-flash';
 function aiName(){return AI.provider==='claude'?'Claude':'Gemini';}
 function syncAiActive(){if(AI.provider==='claude'){AI.key=AI.ckey;AI.model=AI.cmodel;}else{AI.key=AI.gkey;AI.model=AI.gmodel;}}
 function loadAiStored(v){v=v||{};if(v.key&&!v.ckey){v.ckey=v.key;v.cmodel=v.model;}AI.ckey=v.ckey||'';AI.cmodel=v.cmodel||'';AI.gkey=v.gkey||'';AI.gchosen=!!v.gchosen;AI.gmodel=AI.gchosen?(v.gmodel||''):(v.gmodel?FALLBACK_GEMINI:'');AI.provider=v.provider||(AI.ckey&&!AI.gkey?'claude':'gemini');syncAiActive();}
-async function saveAi(p){Object.assign(AI,p);syncAiActive();await IDB.put('kv',{provider:AI.provider,ckey:AI.ckey,cmodel:AI.cmodel,gkey:AI.gkey,gmodel:AI.gmodel,gchosen:AI.gchosen},'ai');}
+async function saveAi(p){Object.assign(AI,p);syncAiActive();await IDB.put('kv',{provider:AI.provider,ckey:AI.ckey,cmodel:AI.cmodel,gkey:AI.gkey,gmodel:AI.gmodel,gchosen:AI.gchosen},'ai').catch(()=>{});}
 function apiHeaders(key){return {'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};}
 function blobToB64(b){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]);fr.onerror=()=>rej(fr.error);fr.readAsDataURL(b);});}
 function parseLoose(t){
@@ -2743,6 +2769,7 @@ async function migrateCats(){
 render();
 (async()=>{
   try{await IDB.open();}catch(e){S.noDb=true;render();return;}
+  await pqFlush();
   try{
     if(!(await IDB.get('kv','initialized'))){
       const now=Date.now();
@@ -2759,7 +2786,9 @@ render();
   }catch(e){S.noDb=true;render();return;}
   let got={r:false,t:false};
   const ready=()=>{if(got.r&&got.t)S.loaded=true;};
-  const onData=()=>{ready();setTimeout(migrateCats,0);if(['library','detail','upload','settings'].includes(S.view)||(S.view==='pantry'&&document.activeElement?.id!=='pin'))render();else if(S.view==='templates'&&!S.tplDirty)render();};
+  const onData=()=>{ready();
+    if(S.loaded&&!S._resumed){S._resumed=true;let rs=null;try{rs=JSON.parse(sessionStorage.getItem('rk-resume')||'null');sessionStorage.removeItem('rk-resume');}catch(_){}
+      if(rs&&rs.view){S.libY=rs.libY||0;Object.assign(S,{view:rs.view==='editor'?'library':rs.view,openId:rs.openId||null,backTo:rs.backTo||'library'});setTimeout(()=>{scrollTo({top:rs.y||0});toast('Gerätespeicher wieder verbunden, alles gespeichert.');},80);}}setTimeout(migrateCats,0);if(['library','detail','upload','settings'].includes(S.view)||(S.view==='pantry'&&document.activeElement?.id!=='pin'))render();else if(S.view==='templates'&&!S.tplDirty)render();};
   db.collection('recipes').onSnapshot(s=>{S.recipes=s.docs.map(d=>ensureRecipe({id:d.id,...clone(d.data())}));got.r=true;onData();});
   db.collection('templates').onSnapshot(s=>{S.templates=s.docs.map(d=>({id:d.id,...clone(d.data())}));got.t=true;onData();});
   db.doc('settings/app').onSnapshot(s=>{const v=s.exists?s.data():{};S.settings={categories:Array.isArray(v.categories)&&v.categories.length?v.categories.slice():DEFAULT_CATS.slice(),defaultTemplateId:v.defaultTemplateId||null};onData();});
